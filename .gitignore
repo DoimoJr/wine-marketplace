@@ -74,3 +74,8 @@ packages/database/prisma/migrations/
 *.njsproj
 *.sln
 *.sw?
+
+# Database maintenance scripts (temporary)
+database-fix*.sql
+database-vacuum.js
+packages/database/vacuum-cleanup.js
