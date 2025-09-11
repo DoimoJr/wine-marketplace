@@ -1,0 +1,33 @@
+{
+  "name": "wine-marketplace",
+  "version": "0.1.0",
+  "description": "Wine marketplace - buy and sell wines like Vinted",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"pnpm --filter api dev\" \"pnpm --filter web dev\" \"pnpm --filter admin dev\"",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "type-check": "pnpm -r type-check",
+    "clean": "pnpm -r clean",
+    "db:generate": "pnpm --filter database db:generate",
+    "db:push": "pnpm --filter database db:push",
+    "db:migrate": "pnpm --filter database db:migrate",
+    "test:e2e": "pnpm --filter e2e-tests test",
+    "test:e2e:ui": "pnpm --filter e2e-tests test:ui",
+    "test:e2e:headed": "pnpm --filter e2e-tests test:headed"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "concurrently": "^8.2.2",
+    "playwright": "^1.55.0",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  }
+}

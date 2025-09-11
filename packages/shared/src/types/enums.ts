@@ -1,0 +1,114 @@
+// User enums
+export enum UserRole {
+  USER = 'USER',
+  ADMIN = 'ADMIN',
+  SUPER_ADMIN = 'SUPER_ADMIN',
+}
+
+// Wine enums
+export enum WineType {
+  RED = 'RED',
+  WHITE = 'WHITE',
+  ROSE = 'ROSE',
+  SPARKLING = 'SPARKLING',
+  DESSERT = 'DESSERT',
+  FORTIFIED = 'FORTIFIED',
+  OTHER = 'OTHER',
+}
+
+export enum WineCondition {
+  MINT = 'MINT',
+  EXCELLENT = 'EXCELLENT',
+  VERY_GOOD = 'VERY_GOOD',
+  GOOD = 'GOOD',
+  FAIR = 'FAIR',
+  POOR = 'POOR',
+}
+
+export enum WineStatus {
+  ACTIVE = 'ACTIVE',
+  SOLD = 'SOLD',
+  RESERVED = 'RESERVED',
+  INACTIVE = 'INACTIVE',
+}
+
+export enum WineSortBy {
+  CREATED_AT = 'CREATED_AT',
+  PRICE = 'PRICE',
+  VINTAGE = 'VINTAGE',
+  TITLE = 'TITLE',
+  RATING = 'RATING',
+}
+
+// Order enums
+export enum OrderStatus {
+  PENDING = 'PENDING',
+  CONFIRMED = 'CONFIRMED',
+  PAID = 'PAID',
+  PROCESSING = 'PROCESSING',
+  SHIPPED = 'SHIPPED',
+  DELIVERED = 'DELIVERED',
+  CANCELLED = 'CANCELLED',
+  DISPUTED = 'DISPUTED',
+}
+
+export enum PaymentProvider {
+  PAYPAL = 'PAYPAL',
+  STRIPE = 'STRIPE',
+  ESCROW = 'ESCROW',
+}
+
+export enum PaymentStatus {
+  PENDING = 'PENDING',
+  COMPLETED = 'COMPLETED',
+  FAILED = 'FAILED',
+  REFUNDED = 'REFUNDED',
+  PARTIALLY_REFUNDED = 'PARTIALLY_REFUNDED',
+}
+
+// Review enums
+export enum ReviewType {
+  USER_REVIEW = 'USER_REVIEW',
+  WINE_REVIEW = 'WINE_REVIEW',
+  ORDER_REVIEW = 'ORDER_REVIEW',
+}
+
+// Message enums
+export enum MessageType {
+  TEXT = 'TEXT',
+  IMAGE = 'IMAGE',
+  SYSTEM = 'SYSTEM',
+  ORDER_UPDATE = 'ORDER_UPDATE',
+}
+
+// Refund enums
+export enum RefundReason {
+  DAMAGED_ITEM = 'DAMAGED_ITEM',
+  ITEM_NOT_RECEIVED = 'ITEM_NOT_RECEIVED',
+  ITEM_NOT_AS_DESCRIBED = 'ITEM_NOT_AS_DESCRIBED',
+  CHANGED_MIND = 'CHANGED_MIND',
+  SELLER_CANCELLED = 'SELLER_CANCELLED',
+  OTHER = 'OTHER',
+}
+
+export enum RefundStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  DENIED = 'DENIED',
+  PROCESSED = 'PROCESSED',
+  COMPLETED = 'COMPLETED',
+}
+
+// Admin enums
+export enum AdminAction {
+  USER_BANNED = 'USER_BANNED',
+  USER_UNBANNED = 'USER_UNBANNED',
+  USER_VERIFIED = 'USER_VERIFIED',
+  WINE_APPROVED = 'WINE_APPROVED',
+  WINE_REJECTED = 'WINE_REJECTED',
+  ORDER_CANCELLED = 'ORDER_CANCELLED',
+  REFUND_APPROVED = 'REFUND_APPROVED',
+  REFUND_DENIED = 'REFUND_DENIED',
+  MESSAGE_DELETED = 'MESSAGE_DELETED',
+  OTHER = 'OTHER',
+}

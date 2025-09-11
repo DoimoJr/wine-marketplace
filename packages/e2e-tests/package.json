@@ -1,0 +1,22 @@
+{
+  "name": "@wine-marketplace/e2e-tests",
+  "version": "0.1.0",
+  "description": "End-to-end tests for wine marketplace",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "test:debug": "playwright test --debug",
+    "test:report": "playwright show-report",
+    "test:install": "playwright install"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "@types/node": "^20.3.1",
+    "typescript": "^5.1.3"
+  },
+  "dependencies": {
+    "@wine-marketplace/shared": "workspace:*"
+  }
+}

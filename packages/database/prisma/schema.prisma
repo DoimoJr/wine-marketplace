@@ -1,0 +1,397 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String   @unique
+  firstName String?
+  lastName  String?
+  avatar    String?
+  phone     String?
+  verified  Boolean  @default(false)
+  banned    Boolean  @default(false)
+  role      UserRole @default(USER)
+  
+  // OAuth fields
+  googleId   String?
+  facebookId String?
+  
+  // Password auth (optional, for local accounts)
+  hashedPassword String?
+  
+  // Profile completion
+  bio           String?
+  location      String?
+  profileComplete Boolean @default(false)
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  wines         Wine[]
+  orders        Order[]
+  purchases     Order[] @relation("OrderPurchaser")
+  reviews       Review[]
+  reviewsReceived Review[] @relation("ReviewTarget")
+  messages      Message[]
+  conversations ConversationParticipant[]
+  refundRequests RefundRequest[]
+  shippingAddresses ShippingAddress[]
+  adminLogs     AdminLog[]
+  
+  @@map("users")
+}
+
+model Wine {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  price       Decimal  @db.Decimal(10, 2)
+  
+  // Wine specific details
+  vintage     Int?
+  region      String?
+  country     String?
+  producer    String?
+  grapeVariety String?
+  alcoholContent Decimal? @db.Decimal(4, 2)
+  volume      Int?     // in ml
+  wineType    WineType
+  
+  // Listing details
+  condition   WineCondition @default(EXCELLENT)
+  quantity    Int           @default(1)
+  status      WineStatus    @default(ACTIVE)
+  
+  // Media
+  images      String[]
+  
+  // Seller
+  sellerId    String
+  seller      User     @relation(fields: [sellerId], references: [id])
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  soldAt      DateTime?
+  
+  // Relations
+  orders      OrderItem[]
+  reviews     Review[]
+  
+  @@map("wines")
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  orderNumber String      @unique
+  
+  // Participants
+  sellerId    String
+  seller      User        @relation(fields: [sellerId], references: [id])
+  buyerId     String
+  buyer       User        @relation("OrderPurchaser", fields: [buyerId], references: [id])
+  
+  // Order details
+  status      OrderStatus @default(PENDING)
+  totalAmount Decimal     @db.Decimal(10, 2)
+  shippingCost Decimal?   @db.Decimal(10, 2)
+  
+  // Payment
+  paymentId   String?
+  paymentProvider PaymentProvider?
+  paymentStatus PaymentStatus @default(PENDING)
+  
+  // Shipping
+  shippingAddressId String?
+  shippingAddress   ShippingAddress? @relation(fields: [shippingAddressId], references: [id])
+  trackingNumber    String?
+  shippingLabelUrl  String?
+  estimatedDelivery DateTime?
+  deliveredAt       DateTime?
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  items       OrderItem[]
+  messages    Message[]
+  refundRequests RefundRequest[]
+  
+  @@map("orders")
+}
+
+model OrderItem {
+  id       String @id @default(cuid())
+  quantity Int    @default(1)
+  price    Decimal @db.Decimal(10, 2)
+  
+  // Relations
+  orderId  String
+  order    Order  @relation(fields: [orderId], references: [id])
+  wineId   String
+  wine     Wine   @relation(fields: [wineId], references: [id])
+  
+  @@map("order_items")
+}
+
+model ShippingAddress {
+  id        String @id @default(cuid())
+  
+  // Address details
+  firstName String
+  lastName  String
+  company   String?
+  address1  String
+  address2  String?
+  city      String
+  state     String?
+  zipCode   String
+  country   String
+  phone     String?
+  
+  // User relation
+  userId    String
+  user      User   @relation(fields: [userId], references: [id])
+  
+  // Default address
+  isDefault Boolean @default(false)
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  orders    Order[]
+  
+  @@map("shipping_addresses")
+}
+
+model Review {
+  id       String @id @default(cuid())
+  rating   Int    // 1-5 stars
+  comment  String?
+  
+  // Relations
+  reviewerId String
+  reviewer   User   @relation(fields: [reviewerId], references: [id])
+  targetId   String // Can be user or wine
+  target     User   @relation("ReviewTarget", fields: [targetId], references: [id])
+  wineId     String?
+  wine       Wine?  @relation(fields: [wineId], references: [id])
+  
+  // Type of review
+  type       ReviewType @default(USER_REVIEW)
+  
+  // Timestamps
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  @@map("reviews")
+}
+
+model Conversation {
+  id        String @id @default(cuid())
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  participants ConversationParticipant[]
+  messages     Message[]
+  
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id       String @id @default(cuid())
+  
+  // Relations
+  userId   String
+  user     User   @relation(fields: [userId], references: [id])
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  
+  // Participant details
+  joinedAt DateTime @default(now())
+  leftAt   DateTime?
+  
+  @@unique([userId, conversationId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id      String @id @default(cuid())
+  content String
+  
+  // Relations
+  senderId String
+  sender   User   @relation(fields: [senderId], references: [id])
+  conversationId String?
+  conversation   Conversation? @relation(fields: [conversationId], references: [id])
+  orderId        String?
+  order          Order? @relation(fields: [orderId], references: [id])
+  
+  // Message details
+  messageType MessageType @default(TEXT)
+  readAt      DateTime?
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  
+  @@map("messages")
+}
+
+model RefundRequest {
+  id       String @id @default(cuid())
+  reason   RefundReason
+  details  String?
+  amount   Decimal @db.Decimal(10, 2)
+  status   RefundStatus @default(PENDING)
+  
+  // Admin handling
+  adminNotes String?
+  processedAt DateTime?
+  
+  // Relations
+  orderId  String
+  order    Order  @relation(fields: [orderId], references: [id])
+  userId   String
+  user     User   @relation(fields: [userId], references: [id])
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("refund_requests")
+}
+
+model AdminLog {
+  id       String @id @default(cuid())
+  action   AdminAction
+  details  String?
+  
+  // Target information
+  targetType String? // 'user', 'wine', 'order', etc.
+  targetId   String?
+  
+  // Relations
+  adminId  String
+  admin    User   @relation(fields: [adminId], references: [id])
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  
+  @@map("admin_logs")
+}
+
+// Enums
+enum UserRole {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum WineType {
+  RED
+  WHITE
+  ROSE
+  SPARKLING
+  DESSERT
+  FORTIFIED
+  OTHER
+}
+
+enum WineCondition {
+  MINT
+  EXCELLENT
+  VERY_GOOD
+  GOOD
+  FAIR
+  POOR
+}
+
+enum WineStatus {
+  ACTIVE
+  SOLD
+  RESERVED
+  INACTIVE
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PAID
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  DISPUTED
+}
+
+enum PaymentProvider {
+  PAYPAL
+  STRIPE
+  ESCROW
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum ReviewType {
+  USER_REVIEW
+  WINE_REVIEW
+  ORDER_REVIEW
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  SYSTEM
+  ORDER_UPDATE
+}
+
+enum RefundReason {
+  DAMAGED_ITEM
+  ITEM_NOT_RECEIVED
+  ITEM_NOT_AS_DESCRIBED
+  CHANGED_MIND
+  SELLER_CANCELLED
+  OTHER
+}
+
+enum RefundStatus {
+  PENDING
+  APPROVED
+  DENIED
+  PROCESSED
+  COMPLETED
+}
+
+enum AdminAction {
+  USER_BANNED
+  USER_UNBANNED
+  USER_VERIFIED
+  WINE_APPROVED
+  WINE_REJECTED
+  ORDER_CANCELLED
+  REFUND_APPROVED
+  REFUND_DENIED
+  MESSAGE_DELETED
+  OTHER
+}

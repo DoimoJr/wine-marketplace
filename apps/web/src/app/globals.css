@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --wine-50: 253 242 248;
+    --wine-100: 252 231 243;
+    --wine-200: 251 207 232;
+    --wine-300: 249 168 212;
+    --wine-400: 244 114 182;
+    --wine-500: 236 72 153;
+    --wine-600: 219 39 119;
+    --wine-700: 190 24 93;
+    --wine-800: 157 23 77;
+    --wine-900: 131 24 67;
+  }
+}

@@ -1,0 +1,79 @@
+services:
+  # Wine Marketplace API - NestJS Backend
+  - type: web
+    name: wine-marketplace-api
+    runtime: docker
+    plan: starter
+    dockerfilePath: apps/api/Dockerfile
+    dockerContext: .
+    region: oregon
+    branch: main
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3002
+      - key: DATABASE_URL
+        fromDatabase:
+          name: wine-marketplace-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: WEB_URL
+        value: https://wine-marketplace-web.onrender.com
+      - key: ADMIN_URL
+        value: https://wine-marketplace-admin.onrender.com
+    healthCheckPath: /health
+
+  # Wine Marketplace Web - Next.js Customer Frontend  
+  - type: web
+    name: wine-marketplace-web
+    runtime: docker
+    plan: starter
+    dockerfilePath: apps/web/Dockerfile
+    dockerContext: .
+    region: oregon
+    branch: main
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: API_BASE_URL
+        value: https://wine-marketplace-api.onrender.com
+      - key: NEXTAUTH_URL
+        value: https://wine-marketplace-web.onrender.com
+      - key: NEXTAUTH_SECRET
+        generateValue: true
+
+  # Wine Marketplace Admin - Next.js Admin Dashboard
+  - type: web
+    name: wine-marketplace-admin
+    runtime: docker
+    plan: starter
+    dockerfilePath: apps/admin/Dockerfile
+    dockerContext: .
+    region: oregon
+    branch: main
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: API_BASE_URL
+        value: https://wine-marketplace-api.onrender.com
+      - key: NEXTAUTH_URL
+        value: https://wine-marketplace-admin.onrender.com
+      - key: NEXTAUTH_SECRET
+        generateValue: true
+
+databases:
+  # PostgreSQL Database
+  - name: wine-marketplace-db
+    databaseName: wine_marketplace
+    user: wine_marketplace_user
+    plan: starter
+    region: oregon
+    ipAllowList: []
