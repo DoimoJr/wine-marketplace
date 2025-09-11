@@ -135,3 +135,23 @@ The API expects these environment variables:
 - TypeScript strict mode enabled
 - All API endpoints require proper DTO validation
 - Swagger documentation required for all public endpoints
+
+## MCP Server Integration
+
+This project has 5 configured MCP servers that should be used proactively:
+
+### 🚨 ALWAYS Use MCP Servers When Possible
+- **PostgreSQL MCP**: For database queries, schema analysis, data exploration
+- **GitHub MCP**: For repository operations, issue management, PR creation  
+- **Playwright MCP**: For web scraping, browser automation, screenshot capture
+- **File System MCP**: For advanced file operations, bulk processing, search
+- **Fetch MCP**: For HTTP requests, API testing, external data retrieval
+
+### MCP Priority Guidelines
+1. **Database tasks** → Use PostgreSQL MCP instead of manual queries
+2. **Repository tasks** → Use GitHub MCP for issues, PRs, repo analysis  
+3. **Web scraping/testing** → Use Playwright MCP for automation
+4. **File operations** → Use File System MCP for complex file tasks
+5. **API calls** → Use Fetch MCP for external requests
+
+**Rule**: When multiple approaches exist, always prefer MCP server capabilities over basic tools.

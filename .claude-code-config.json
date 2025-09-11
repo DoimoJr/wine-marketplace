@@ -1,0 +1,17 @@
+{
+  "instructions": {
+    "general": "This is a wine marketplace monorepo with full MCP server integration.",
+    "mcp_priority": "ALWAYS prioritize MCP servers over basic tools when available",
+    "database_tasks": "Use PostgreSQL MCP for any database queries, analysis, or schema inspection",
+    "repository_tasks": "Use GitHub MCP for repository operations, issue management, PR creation, code analysis", 
+    "web_automation": "Use Playwright MCP for web scraping, browser automation, testing, screenshots",
+    "file_operations": "Use File System MCP for advanced file operations beyond basic read/write",
+    "api_requests": "Use Fetch MCP for HTTP requests, API testing, external data retrieval",
+    "proactive_usage": "Use MCP servers proactively without being explicitly asked when the task benefits from them"
+  },
+  "mcp_servers": {
+    "available": ["postgres", "github", "playwright", "filesystem", "fetch"],
+    "priority_order": ["postgres", "github", "playwright", "filesystem", "fetch"],
+    "use_by_default": true
+  }
+}
