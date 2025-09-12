@@ -101,7 +101,7 @@ const statusIcons = {
 
 export default function RefundsPage() {
   const { user } = useAuth()
-  const { showToast } = useToast()
+  const { success: showSuccess, error: showError } = useToast()
   const [refunds, setRefunds] = useState<RefundRequest[]>([])
   const [filterCounts, setFilterCounts] = useState<FilterCounts>({
     total: 0,
@@ -152,7 +152,7 @@ export default function RefundsPage() {
       setTotalPages(data.totalPages || 1)
     } catch (error) {
       console.error('Error fetching refunds:', error)
-      showToast('Error fetching refunds', 'error')
+      showError('Error fetching refunds')
     } finally {
       setLoading(false)
     }
@@ -224,13 +224,13 @@ export default function RefundsPage() {
         throw new Error(`Failed to ${action.toLowerCase()} refund`)
       }
 
-      showToast(`Refund ${action.toLowerCase()} successfully`, 'success')
+      showSuccess(`Refund ${action.toLowerCase()} successfully`)
       fetchRefunds(currentPage, searchTerm, activeFilter)
       fetchFilterCounts()
       setSelectedRefund(null)
     } catch (error) {
       console.error(`Error ${action.toLowerCase()} refund:`, error)
-      showToast(`Error ${action.toLowerCase()} refund`, 'error')
+      showError(`Error ${action.toLowerCase()} refund`)
     }
   }
 
