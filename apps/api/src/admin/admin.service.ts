@@ -5,12 +5,17 @@ import {
   CreateRefundRequestDto, 
   UpdateUserStatusDto, 
   UpdateWineStatusDto,
+  AdminUpdateWineDto,
+  AdminUpdateOrderDto,
+  AdminUpdateOrderStatusDto,
   AdminFiltersDto,
-  RefundFiltersDto 
+  RefundFiltersDto,
+  ProcessOrderRefundDto
 } from './dto/admin.dto';
 import { 
   AdminAction, 
   RefundStatus, 
+  RefundReason,
   OrderStatus,
   WineStatus,
   UserRole 
@@ -231,7 +236,7 @@ export class AdminService {
     return updatedUser;
   }
 
-  async getWines(page = 1, limit = 20, status?: WineStatus): Promise<any> {
+  async getWines(page = 1, limit = 20, status?: WineStatus, search?: string): Promise<any> {
     const pageNumber = Math.max(1, page);
     const limitNumber = Math.max(1, Math.min(100, limit));
     const skip = (pageNumber - 1) * limitNumber;
@@ -239,6 +244,19 @@ export class AdminService {
     const where: any = {};
     if (status) {
       where.status = status;
+    }
+    
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+        { producer: { contains: search, mode: 'insensitive' } },
+        { region: { contains: search, mode: 'insensitive' } },
+        { grapeVariety: { contains: search, mode: 'insensitive' } },
+        { seller: { firstName: { contains: search, mode: 'insensitive' } } },
+        { seller: { lastName: { contains: search, mode: 'insensitive' } } },
+        { seller: { username: { contains: search, mode: 'insensitive' } } },
+      ];
     }
 
     const [wines, total] = await Promise.all([
@@ -269,6 +287,48 @@ export class AdminService {
       limit: limitNumber,
       totalPages: Math.ceil(total / limitNumber),
     };
+  }
+
+  async updateWine(wineId: string, updateWineDto: AdminUpdateWineDto, adminId: string): Promise<any> {
+    const wine = await this.prisma.wine.findUnique({
+      where: { id: wineId },
+      select: { id: true, title: true, status: true },
+    });
+
+    if (!wine) {
+      throw new NotFoundException('Wine not found');
+    }
+
+    const { adminNotes, ...updateData } = updateWineDto;
+
+    const updatedWine = await this.prisma.wine.update({
+      where: { id: wineId },
+      data: updateData,
+      include: {
+        seller: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true,
+            verified: true,
+          },
+        },
+      },
+    });
+
+    // Log admin action
+    await this.prisma.adminLog.create({
+      data: {
+        action: AdminAction.WINE_UPDATED,
+        details: adminNotes || `Wine "${wine.title}" updated by admin`,
+        targetType: 'wine',
+        targetId: wineId,
+        adminId,
+      },
+    });
+
+    return updatedWine;
   }
 
   async updateWineStatus(wineId: string, updateWineStatusDto: UpdateWineStatusDto, adminId: string): Promise<any> {
@@ -303,7 +363,144 @@ export class AdminService {
     return updatedWine;
   }
 
-  async getOrders(page = 1, limit = 20, status?: OrderStatus): Promise<any> {
+  async updateOrder(orderId: string, updateOrderDto: AdminUpdateOrderDto, adminId: string): Promise<any> {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      select: { id: true, orderNumber: true, status: true, paymentStatus: true },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    const { adminNotes, ...updateData } = updateOrderDto;
+
+    // Convert date strings to Date objects
+    const processedData: any = { ...updateData };
+    if (updateData.estimatedDelivery) {
+      processedData.estimatedDelivery = new Date(updateData.estimatedDelivery);
+    }
+    if (updateData.deliveredAt) {
+      processedData.deliveredAt = new Date(updateData.deliveredAt);
+    }
+
+    const updatedOrder = await this.prisma.order.update({
+      where: { id: orderId },
+      data: processedData,
+      include: {
+        seller: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true,
+            verified: true,
+          },
+        },
+        buyer: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true,
+            verified: true,
+          },
+        },
+        items: {
+          include: {
+            wine: {
+              select: {
+                id: true,
+                title: true,
+                images: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Log admin action
+    await this.prisma.adminLog.create({
+      data: {
+        action: AdminAction.ORDER_UPDATED,
+        details: adminNotes || `Order ${order.orderNumber} updated by admin`,
+        targetType: 'order',
+        targetId: orderId,
+        adminId,
+      },
+    });
+
+    return updatedOrder;
+  }
+
+  async updateOrderStatus(orderId: string, updateOrderStatusDto: AdminUpdateOrderStatusDto, adminId: string): Promise<any> {
+    const { status, trackingNumber, adminNotes } = updateOrderStatusDto;
+
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      select: { id: true, orderNumber: true, status: true },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    // Prepare update data
+    const updateData: any = { status };
+    if (trackingNumber) {
+      updateData.trackingNumber = trackingNumber;
+    }
+
+    const updatedOrder = await this.prisma.order.update({
+      where: { id: orderId },
+      data: updateData,
+      include: {
+        seller: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        buyer: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        items: {
+          include: {
+            wine: {
+              select: {
+                id: true,
+                title: true,
+                images: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Log admin action
+    await this.prisma.adminLog.create({
+      data: {
+        action: AdminAction.ORDER_UPDATED,
+        details: adminNotes || `Order ${order.orderNumber} status updated to ${status} by admin`,
+        targetType: 'order',
+        targetId: orderId,
+        adminId,
+      },
+    });
+
+    return updatedOrder;
+  }
+
+  async getOrders(page = 1, limit = 20, status?: OrderStatus, search?: string): Promise<any> {
     const pageNumber = Math.max(1, page);
     const limitNumber = Math.max(1, Math.min(100, limit));
     const skip = (pageNumber - 1) * limitNumber;
@@ -311,6 +508,43 @@ export class AdminService {
     const where: any = {};
     if (status) {
       where.status = status;
+    }
+    
+    if (search && search.trim()) {
+      const searchTerm = search.trim();
+      
+      where.OR = [
+        {
+          id: {
+            contains: searchTerm,
+            mode: 'insensitive',
+          },
+        },
+        {
+          buyer: {
+            firstName: {
+              contains: searchTerm,
+              mode: 'insensitive',
+            },
+          },
+        },
+        {
+          buyer: {
+            lastName: {
+              contains: searchTerm,
+              mode: 'insensitive',
+            },
+          },
+        },
+        {
+          buyer: {
+            email: {
+              contains: searchTerm,
+              mode: 'insensitive',
+            },
+          },
+        },
+      ];
     }
 
     const [orders, total] = await Promise.all([
@@ -349,6 +583,15 @@ export class AdminService {
               },
             },
           },
+          refundRequests: {
+            select: {
+              id: true,
+              amount: true,
+              reason: true,
+              status: true,
+              createdAt: true,
+            },
+          },
         },
       }),
       this.prisma.order.count({ where }),
@@ -361,6 +604,74 @@ export class AdminService {
       limit: limitNumber,
       totalPages: Math.ceil(total / limitNumber),
     };
+  }
+
+  async getOrder(orderId: string): Promise<any> {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        buyer: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+            verified: true,
+          },
+        },
+        items: {
+          include: {
+            wine: {
+              select: {
+                id: true,
+                title: true,
+                vintage: true,
+                producer: true,
+                region: true,
+                country: true,
+                price: true,
+                images: true,
+                condition: true,
+                seller: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    email: true,
+                    phone: true,
+                    verified: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        shippingAddress: true,
+        refundRequests: {
+          select: {
+            id: true,
+            amount: true,
+            reason: true,
+            status: true,
+            details: true,
+            createdAt: true,
+            updatedAt: true,
+            processedAt: true,
+            adminNotes: true,
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    return order;
   }
 
   async getRefunds(filters: RefundFiltersDto = {}): Promise<any> {
@@ -416,12 +727,32 @@ export class AdminService {
           },
           order: {
             include: {
+              buyer: {
+                select: {
+                  id: true,
+                  username: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                },
+              },
+              seller: {
+                select: {
+                  id: true,
+                  username: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                },
+              },
               items: {
                 include: {
                   wine: {
                     select: {
                       id: true,
                       title: true,
+                      vintage: true,
+                      region: true,
                       images: true,
                     },
                   },
@@ -614,5 +945,187 @@ export class AdminService {
       limit: limitNumber,
       totalPages: Math.ceil(total / limitNumber),
     };
+  }
+
+  async getOrderStatusCounts(): Promise<any> {
+    const [
+      totalOrders,
+      pendingOrders,
+      confirmedOrders,
+      paidOrders,
+      processingOrders,
+      shippedOrders,
+      deliveredOrders,
+      cancelledOrders,
+      disputedOrders
+    ] = await Promise.all([
+      this.prisma.order.count(),
+      this.prisma.order.count({ where: { status: OrderStatus.PENDING } }),
+      this.prisma.order.count({ where: { status: OrderStatus.CONFIRMED } }),
+      this.prisma.order.count({ where: { status: OrderStatus.PAID } }),
+      this.prisma.order.count({ where: { status: OrderStatus.PROCESSING } }),
+      this.prisma.order.count({ where: { status: OrderStatus.SHIPPED } }),
+      this.prisma.order.count({ where: { status: OrderStatus.DELIVERED } }),
+      this.prisma.order.count({ where: { status: OrderStatus.CANCELLED } }),
+      this.prisma.order.count({ where: { status: OrderStatus.DISPUTED } })
+    ]);
+
+    return {
+      total: totalOrders,
+      pending: pendingOrders,
+      confirmed: confirmedOrders,
+      paid: paidOrders,
+      processing: processingOrders,
+      shipped: shippedOrders,
+      delivered: deliveredOrders,
+      cancelled: cancelledOrders,
+      disputed: disputedOrders
+    };
+  }
+
+  async getRefundStatusCounts(): Promise<any> {
+    const [
+      totalRefunds,
+      pendingRefunds,
+      approvedRefunds,
+      deniedRefunds,
+      processedRefunds,
+      completedRefunds
+    ] = await Promise.all([
+      this.prisma.refundRequest.count(),
+      this.prisma.refundRequest.count({ where: { status: RefundStatus.PENDING } }),
+      this.prisma.refundRequest.count({ where: { status: RefundStatus.APPROVED } }),
+      this.prisma.refundRequest.count({ where: { status: RefundStatus.DENIED } }),
+      this.prisma.refundRequest.count({ where: { status: RefundStatus.PROCESSED } }),
+      this.prisma.refundRequest.count({ where: { status: RefundStatus.COMPLETED } })
+    ]);
+
+    return {
+      total: totalRefunds,
+      pending: pendingRefunds,
+      approved: approvedRefunds,
+      denied: deniedRefunds,
+      processed: processedRefunds,
+      completed: completedRefunds
+    };
+  }
+
+  async processOrderRefund(orderId: string, processOrderRefundDto: ProcessOrderRefundDto, adminId: string): Promise<any> {
+    const { amount, reason, adminNotes } = processOrderRefundDto;
+
+    // Verify order exists and get order details
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        buyer: {
+          select: {
+            id: true,
+            username: true,
+            email: true,
+          },
+        },
+        items: {
+          include: {
+            wine: {
+              select: {
+                title: true,
+                vintage: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    // Check if refund amount is not greater than order total
+    if (amount > Number(order.totalAmount)) {
+      throw new BadRequestException('Refund amount cannot be greater than order total');
+    }
+
+    // Check if there's already a refund for this order
+    const existingRefund = await this.prisma.refundRequest.findFirst({
+      where: { orderId },
+    });
+
+    if (existingRefund) {
+      throw new BadRequestException('Refund request already exists for this order');
+    }
+
+    // Create refund request with APPROVED status (since admin is directly processing it)
+    const refundRequest = await this.prisma.refundRequest.create({
+      data: {
+        reason: RefundReason.OTHER, // Use OTHER as the enum value for admin-initiated refunds
+        details: reason, // Use the reason text as details
+        amount,
+        orderId,
+        userId: order.buyer.id,
+        status: RefundStatus.APPROVED,
+        adminNotes: adminNotes || `Refund processed by admin`,
+        processedAt: new Date(),
+      },
+      include: {
+        order: {
+          include: {
+            buyer: {
+              select: {
+                id: true,
+                username: true,
+                email: true,
+              },
+            },
+            seller: {
+              select: {
+                id: true,
+                username: true,
+                email: true,
+              },
+            },
+            items: {
+              include: {
+                wine: {
+                  select: {
+                    title: true,
+                    vintage: true,
+                    region: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            username: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    // Update order status to REFUNDED if full refund
+    if (amount >= Number(order.totalAmount)) {
+      await this.prisma.order.update({
+        where: { id: orderId },
+        data: { status: OrderStatus.CANCELLED }, // Or create a REFUNDED status
+      });
+    }
+
+    // Log admin action
+    await this.prisma.adminLog.create({
+      data: {
+        action: AdminAction.REFUND_APPROVED,
+        details: `Refund of €${amount} processed for order ${order.orderNumber}. Reason: ${reason}`,
+        targetType: 'order',
+        targetId: orderId,
+        adminId,
+      },
+    });
+
+    return refundRequest;
   }
 }

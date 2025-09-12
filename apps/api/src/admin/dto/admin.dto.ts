@@ -5,6 +5,8 @@ import {
   IsBoolean,
   IsNumber,
   IsDateString,
+  IsInt,
+  IsArray,
   Min,
   Max,
   IsUUID,
@@ -18,7 +20,10 @@ import {
   AdminAction, 
   UserRole,
   WineStatus,
-  OrderStatus 
+  WineType,
+  WineCondition,
+  OrderStatus,
+  PaymentStatus 
 } from '@wine-marketplace/shared';
 
 export class ProcessRefundDto {
@@ -331,4 +336,291 @@ export class AdminDashboardStatsDto {
     example: 432,
   })
   activeUsers: number;
+}
+
+export class AdminUpdateWineDto {
+  @ApiPropertyOptional({
+    description: 'Wine title',
+    example: 'Barolo DOCG Brunate 2018',
+    maxLength: 100,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  title?: string;
+
+  @ApiPropertyOptional({
+    description: 'Wine description',
+    example: 'Exceptional Barolo from one of the most prestigious crus in the region.',
+    maxLength: 2000,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  description?: string;
+
+  @ApiPropertyOptional({
+    description: 'Price in EUR',
+    example: 85.50,
+    minimum: 0.01,
+    maximum: 10000,
+  })
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0.01)
+  @Max(10000)
+  @Type(() => Number)
+  price?: number;
+
+  @ApiPropertyOptional({
+    description: 'Wine vintage year',
+    example: 2018,
+    minimum: 1800,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1800)
+  @Max(new Date().getFullYear())
+  @Type(() => Number)
+  vintage?: number;
+
+  @ApiPropertyOptional({
+    description: 'Wine region',
+    example: 'Piemonte',
+    maxLength: 100,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  region?: string;
+
+  @ApiPropertyOptional({
+    description: 'Country of origin',
+    example: 'Italy',
+    maxLength: 100,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  country?: string;
+
+  @ApiPropertyOptional({
+    description: 'Wine producer',
+    example: 'Giuseppe Rinaldi',
+    maxLength: 100,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  producer?: string;
+
+  @ApiPropertyOptional({
+    description: 'Grape variety',
+    example: 'Nebbiolo',
+    maxLength: 100,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  grapeVariety?: string;
+
+  @ApiPropertyOptional({
+    description: 'Alcohol content percentage',
+    example: 14.5,
+    minimum: 0,
+    maximum: 50,
+  })
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(50)
+  @Type(() => Number)
+  alcoholContent?: number;
+
+  @ApiPropertyOptional({
+    description: 'Bottle volume in ml',
+    example: 750,
+    minimum: 1,
+    maximum: 5000,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(5000)
+  @Type(() => Number)
+  volume?: number;
+
+  @ApiPropertyOptional({
+    description: 'Type of wine',
+    enum: WineType,
+    example: WineType.RED,
+  })
+  @IsOptional()
+  @IsEnum(WineType)
+  wineType?: WineType;
+
+  @ApiPropertyOptional({
+    description: 'Condition of the wine',
+    enum: WineCondition,
+    example: WineCondition.EXCELLENT,
+  })
+  @IsOptional()
+  @IsEnum(WineCondition)
+  condition?: WineCondition;
+
+  @ApiPropertyOptional({
+    description: 'Quantity available',
+    example: 1,
+    minimum: 1,
+    maximum: 999,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(999)
+  @Type(() => Number)
+  quantity?: number;
+
+  @ApiPropertyOptional({
+    description: 'Array of image URLs',
+    example: ['/images/wine1.jpg', '/images/wine2.jpg'],
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  images?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Wine status',
+    enum: WineStatus,
+    example: WineStatus.ACTIVE,
+  })
+  @IsOptional()
+  @IsEnum(WineStatus)
+  status?: WineStatus;
+
+  @ApiPropertyOptional({
+    description: 'Admin notes about the wine changes',
+    maxLength: 500,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  adminNotes?: string;
+}
+
+export class AdminUpdateOrderDto {
+  @ApiPropertyOptional({
+    description: 'Order status',
+    enum: OrderStatus,
+    example: OrderStatus.SHIPPED,
+  })
+  @IsOptional()
+  @IsEnum(OrderStatus)
+  status?: OrderStatus;
+
+  @ApiPropertyOptional({
+    description: 'Payment status',
+    enum: PaymentStatus,
+    example: PaymentStatus.COMPLETED,
+  })
+  @IsOptional()
+  @IsEnum(PaymentStatus)
+  paymentStatus?: PaymentStatus;
+
+  @ApiPropertyOptional({
+    description: 'Tracking number for shipment',
+    example: 'TN123456789',
+    maxLength: 100,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  trackingNumber?: string;
+
+  @ApiPropertyOptional({
+    description: 'Estimated delivery date',
+    example: '2024-12-25T10:00:00Z',
+  })
+  @IsOptional()
+  @IsDateString()
+  estimatedDelivery?: string;
+
+  @ApiPropertyOptional({
+    description: 'Actual delivery date',
+    example: '2024-12-24T14:30:00Z',
+  })
+  @IsOptional()
+  @IsDateString()
+  deliveredAt?: string;
+
+  @ApiPropertyOptional({
+    description: 'Admin notes about the order changes',
+    maxLength: 500,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  adminNotes?: string;
+}
+
+export class AdminUpdateOrderStatusDto {
+  @ApiProperty({
+    description: 'Order status',
+    enum: OrderStatus,
+    example: OrderStatus.SHIPPED,
+  })
+  @IsEnum(OrderStatus)
+  status: OrderStatus;
+
+  @ApiPropertyOptional({
+    description: 'Tracking number for shipment',
+    example: 'TN123456789',
+    maxLength: 100,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  trackingNumber?: string;
+
+  @ApiPropertyOptional({
+    description: 'Admin notes about the status change',
+    maxLength: 500,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  adminNotes?: string;
+}
+
+export class ProcessOrderRefundDto {
+  @ApiProperty({
+    description: 'Refund amount',
+    example: 85.50,
+    minimum: 0.01,
+  })
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0.01)
+  @Type(() => Number)
+  amount: number;
+
+  @ApiProperty({
+    description: 'Reason for refund',
+    example: 'Customer requested refund due to damaged item',
+    maxLength: 1000,
+  })
+  @IsString()
+  @MaxLength(1000)
+  reason: string;
+
+  @ApiPropertyOptional({
+    description: 'Admin notes about the refund',
+    example: 'Approved due to shipping damage',
+    maxLength: 500,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  adminNotes?: string;
 }

@@ -98,7 +98,7 @@ export function useToast() {
 
 function ToastContainer({ toasts, onRemove }: { toasts: Toast[], onRemove: (id: string) => void }) {
   return (
-    <div className="fixed top-4 right-4 z-50 space-y-2 max-w-sm">
+    <div className="fixed top-4 right-4 z-50 space-y-2 max-w-md w-full">
       {toasts.map((toast) => (
         <ToastItem key={toast.id} toast={toast} onRemove={onRemove} />
       ))}
@@ -151,18 +151,18 @@ function ToastItem({ toast, onRemove }: { toast: Toast, onRemove: (id: string) =
       leaveFrom="opacity-100"
       leaveTo="opacity-0"
     >
-      <div className={`max-w-sm w-full shadow-lg rounded-lg border-2 ${colors[toast.type]} pointer-events-auto`}>
+      <div className={`min-w-80 max-w-md w-full shadow-lg rounded-lg border-2 ${colors[toast.type]} pointer-events-auto`}>
         <div className="p-4">
           <div className="flex items-start">
             <div className="flex-shrink-0">
               <Icon className={`h-6 w-6 ${iconColors[toast.type]}`} />
             </div>
-            <div className="ml-3 w-0 flex-1">
-              <p className="text-sm font-medium">
+            <div className="ml-3 flex-1 min-w-0">
+              <p className="text-sm font-medium break-words">
                 {toast.title}
               </p>
               {toast.message && (
-                <p className="mt-1 text-sm opacity-90">
+                <p className="mt-1 text-sm opacity-90 break-words leading-relaxed">
                   {toast.message}
                 </p>
               )}

@@ -166,7 +166,7 @@ export default function OrderEditModal({ isOpen, onClose, order, onOrderUpdated 
       const token = localStorage.getItem('adminToken')
       if (!token) throw new Error('No admin token')
 
-      const response = await fetch(`http://localhost:3010/api/admin/orders/${order.id}/refund`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/orders/${order.id}/refund`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

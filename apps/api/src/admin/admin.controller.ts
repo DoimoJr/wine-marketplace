@@ -22,9 +22,13 @@ import {
   CreateRefundRequestDto,
   UpdateUserStatusDto,
   UpdateWineStatusDto,
+  AdminUpdateWineDto,
+  AdminUpdateOrderDto,
+  AdminUpdateOrderStatusDto,
   AdminFiltersDto,
   RefundFiltersDto,
   AdminDashboardStatsDto,
+  ProcessOrderRefundDto,
 } from './dto/admin.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -96,15 +100,30 @@ export class AdminController {
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'status', required: false, enum: WineStatus })
+  @ApiQuery({ name: 'search', required: false, type: String })
   @ApiResponse({ status: 200, description: 'Wines retrieved successfully' })
   getWines(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('status') status?: WineStatus,
+    @Query('search') search?: string,
   ): Promise<any> {
     const pageNumber = page && !isNaN(parseInt(page, 10)) ? parseInt(page, 10) : 1;
     const limitNumber = limit && !isNaN(parseInt(limit, 10)) ? parseInt(limit, 10) : 20;
-    return this.adminService.getWines(pageNumber, limitNumber, status);
+    return this.adminService.getWines(pageNumber, limitNumber, status, search);
+  }
+
+  @Put('wines/:wineId')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Update wine details (admin only)' })
+  @ApiResponse({ status: 200, description: 'Wine updated successfully' })
+  @ApiResponse({ status: 404, description: 'Wine not found' })
+  updateWine(
+    @Param('wineId') wineId: string,
+    @Body() updateWineDto: AdminUpdateWineDto,
+    @CurrentUser() admin: any,
+  ): Promise<any> {
+    return this.adminService.updateWine(wineId, updateWineDto, admin.id);
   }
 
   @Patch('wines/:wineId/status')
@@ -126,15 +145,60 @@ export class AdminController {
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'status', required: false, enum: OrderStatus })
+  @ApiQuery({ name: 'search', required: false, type: String })
   @ApiResponse({ status: 200, description: 'Orders retrieved successfully' })
   getOrders(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('status') status?: OrderStatus,
+    @Query('search') search?: string,
   ): Promise<any> {
     const pageNumber = page && !isNaN(parseInt(page, 10)) ? parseInt(page, 10) : 1;
     const limitNumber = limit && !isNaN(parseInt(limit, 10)) ? parseInt(limit, 10) : 20;
-    return this.adminService.getOrders(pageNumber, limitNumber, status);
+    return this.adminService.getOrders(pageNumber, limitNumber, status, search);
+  }
+
+  @Get('orders/stats')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Get order status counts' })
+  @ApiResponse({ status: 200, description: 'Order status counts retrieved successfully' })
+  getOrderStatusCounts(): Promise<any> {
+    return this.adminService.getOrderStatusCounts();
+  }
+
+  @Get('orders/:orderId')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Get single order details (admin only)' })
+  @ApiResponse({ status: 200, description: 'Order retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'Order not found' })
+  getOrder(@Param('orderId') orderId: string): Promise<any> {
+    return this.adminService.getOrder(orderId);
+  }
+
+  @Put('orders/:orderId')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Update order details (admin only)' })
+  @ApiResponse({ status: 200, description: 'Order updated successfully' })
+  @ApiResponse({ status: 404, description: 'Order not found' })
+  updateOrder(
+    @Param('orderId') orderId: string,
+    @Body() updateOrderDto: AdminUpdateOrderDto,
+    @CurrentUser() admin: any,
+  ): Promise<any> {
+    return this.adminService.updateOrder(orderId, updateOrderDto, admin.id);
+  }
+
+  @Patch('orders/:orderId/status')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Update order status (admin only)' })
+  @ApiResponse({ status: 200, description: 'Order status updated successfully' })
+  @ApiResponse({ status: 404, description: 'Order not found' })
+  updateOrderStatus(
+    @Param('orderId') orderId: string,
+    @Body() updateOrderStatusDto: AdminUpdateOrderStatusDto,
+    @CurrentUser() admin: any,
+  ): Promise<any> {
+    return this.adminService.updateOrderStatus(orderId, updateOrderStatusDto, admin.id);
   }
 
   @Get('refunds')
@@ -177,5 +241,27 @@ export class AdminController {
   @ApiResponse({ status: 200, description: 'Admin logs retrieved successfully' })
   getAdminLogs(@Query() filters: AdminFiltersDto): Promise<any> {
     return this.adminService.getAdminLogs(filters);
+  }
+
+  @Get('refunds/stats')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Get refund status counts' })
+  @ApiResponse({ status: 200, description: 'Refund status counts retrieved successfully' })
+  getRefundStatusCounts(): Promise<any> {
+    return this.adminService.getRefundStatusCounts();
+  }
+
+  @Post('orders/:orderId/refund')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Process refund for an order (admin only)' })
+  @ApiResponse({ status: 201, description: 'Refund processed successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid refund data' })
+  @ApiResponse({ status: 404, description: 'Order not found' })
+  processOrderRefund(
+    @Param('orderId') orderId: string,
+    @Body() processOrderRefundDto: ProcessOrderRefundDto,
+    @CurrentUser() admin: any,
+  ): Promise<any> {
+    return this.adminService.processOrderRefund(orderId, processOrderRefundDto, admin.id);
   }
 }

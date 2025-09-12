@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { 
   BellIcon, 
-  MagnifyingGlassIcon, 
   UserCircleIcon,
   ChevronDownIcon,
   Cog6ToothIcon,
@@ -25,7 +24,6 @@ interface HeaderStats {
 
 export default function AdminHeader({ user, onLogout }: AdminHeaderProps) {
   const [showProfileMenu, setShowProfileMenu] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
   const [stats, setStats] = useState<HeaderStats>({
     totalUsers: 0,
     totalOrders: 0,
@@ -125,19 +123,6 @@ export default function AdminHeader({ user, onLogout }: AdminHeaderProps) {
             <h1 className="text-2xl font-semibold text-gray-900">{getPageTitle()}</h1>
           </div>
 
-          {/* Center - Search */}
-          <div className="flex-1 max-w-lg mx-8">
-            <div className="relative">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search users, wines, orders..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              />
-            </div>
-          </div>
 
           {/* Right side - Actions and Profile */}
           <div className="flex items-center space-x-4">

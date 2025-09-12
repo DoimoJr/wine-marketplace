@@ -315,15 +315,15 @@ export default function WinesManagement() {
           {/* Header Actions */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Wine Catalog Management</h1>
-              <p className="text-gray-600">Review, approve, and manage wine listings</p>
+              <h1 className="text-2xl font-bold text-gray-900">Gestione Catalogo Vini</h1>
+              <p className="text-gray-600">Rivedi, approva e gestisci le inserzioni di vini</p>
             </div>
             <div className="flex items-center space-x-3">
               <div className="relative">
                 <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search wines..."
+                  placeholder="Cerca vini..."
                   value={searchTerm}
                   onChange={handleSearch}
                   className="pl-10 pr-4 py-2 w-64 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
@@ -336,10 +336,10 @@ export default function WinesManagement() {
           <div className="border-b border-gray-200">
             <nav className="-mb-px flex space-x-8">
               {[
-                { key: 'all', label: 'All Wines', count: filterCounts.all },
-                { key: 'pending', label: 'Pending Review', count: filterCounts.pending },
-                { key: 'active', label: 'Active', count: filterCounts.active },
-                { key: 'rejected', label: 'Rejected', count: filterCounts.rejected }
+                { key: 'all', label: 'Tutti i Vini', count: filterCounts.all },
+                { key: 'pending', label: 'In Revisione', count: filterCounts.pending },
+                { key: 'active', label: 'Attivi', count: filterCounts.active },
+                { key: 'rejected', label: 'Rifiutati', count: filterCounts.rejected }
               ].map((tab) => (
                 <button
                   key={tab.key}
@@ -361,14 +361,14 @@ export default function WinesManagement() {
             {loading ? (
               <div className="p-12 text-center">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-                <p className="mt-2 text-gray-500">Loading wines...</p>
+                <p className="mt-2 text-gray-500">Caricamento vini...</p>
               </div>
             ) : filteredWines.length === 0 ? (
               <div className="p-12 text-center">
                 <PhotoIcon className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No wines found</h3>
+                <h3 className="mt-2 text-sm font-medium text-gray-900">Nessun vino trovato</h3>
                 <p className="mt-1 text-sm text-gray-500">
-                  {searchTerm ? 'Try adjusting your search terms' : 'No wines match the selected filter'}
+                  {searchTerm ? 'Prova a modificare i termini di ricerca' : 'Nessun vino corrisponde al filtro selezionato'}
                 </p>
               </div>
             ) : (
@@ -431,7 +431,7 @@ export default function WinesManagement() {
                       {/* Seller Info */}
                       <div className="border-t pt-3 mb-4">
                         <div className="flex items-center text-sm text-gray-600">
-                          <span>Seller: @{wine.seller.username}</span>
+                          <span>Venditore: @{wine.seller.username}</span>
                           {wine.seller.verified && (
                             <CheckCircleIcon className="h-4 w-4 ml-1 text-green-500" />
                           )}
@@ -448,7 +448,7 @@ export default function WinesManagement() {
                           className="flex-1 inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-primary-600 bg-primary-50 border border-primary-200 rounded-lg hover:bg-primary-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
                         >
                           <PencilIcon className="h-4 w-4 mr-2" />
-                          Edit
+                          Modifica
                         </button>
                         <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
                           <EyeIcon className="h-4 w-4" />

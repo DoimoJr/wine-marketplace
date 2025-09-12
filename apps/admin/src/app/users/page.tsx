@@ -331,15 +331,15 @@ export default function UsersManagement() {
           {/* Header Actions */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-              <p className="text-gray-600">Manage user accounts, permissions, and status</p>
+              <h1 className="text-2xl font-bold text-gray-900">Gestione Utenti</h1>
+              <p className="text-gray-600">Gestisci account utenti, permessi e stato</p>
             </div>
             <div className="flex items-center space-x-3">
               <div className="relative">
                 <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search users..."
+                  placeholder="Cerca utenti..."
                   value={searchTerm}
                   onChange={handleSearch}
                   className="pl-10 pr-4 py-2 w-64 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
@@ -352,10 +352,10 @@ export default function UsersManagement() {
           <div className="border-b border-gray-200">
             <nav className="-mb-px flex space-x-8">
               {[
-                { key: 'all', label: 'All Users', count: filterCounts.all },
-                { key: 'verified', label: 'Verified', count: filterCounts.verified },
-                { key: 'unverified', label: 'Unverified', count: filterCounts.unverified },
-                { key: 'admin', label: 'Admins', count: filterCounts.admin }
+                { key: 'all', label: 'Tutti gli Utenti', count: filterCounts.all },
+                { key: 'verified', label: 'Verificati', count: filterCounts.verified },
+                { key: 'unverified', label: 'Non Verificati', count: filterCounts.unverified },
+                { key: 'admin', label: 'Amministratori', count: filterCounts.admin }
               ].map((tab) => (
                 <button
                   key={tab.key}
@@ -388,14 +388,14 @@ export default function UsersManagement() {
             {loading ? (
               <div className="p-12 text-center">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-                <p className="mt-2 text-gray-500">Loading users...</p>
+                <p className="mt-2 text-gray-500">Caricamento utenti...</p>
               </div>
             ) : filteredUsers.length === 0 ? (
               <div className="p-12 text-center">
                 <UserCircleIcon className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No users found</h3>
+                <h3 className="mt-2 text-sm font-medium text-gray-900">Nessun utente trovato</h3>
                 <p className="mt-1 text-sm text-gray-500">
-                  {searchTerm ? 'Try adjusting your search terms' : 'No users match the selected filter'}
+                  {searchTerm ? 'Prova a modificare i termini di ricerca' : 'Nessun utente corrisponde al filtro selezionato'}
                 </p>
               </div>
             ) : (
@@ -412,19 +412,19 @@ export default function UsersManagement() {
                         />
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        User
+                        Utente
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
+                        Stato
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Activity
+                        Attività
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Joined
+                        Iscrizione
                       </th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
+                        Azioni
                       </th>
                     </tr>
                   </thead>
@@ -466,26 +466,26 @@ export default function UsersManagement() {
                             {userData.verified && (
                               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                 <CheckCircleIcon className="h-3 w-3 mr-1" />
-                                Verified
+                                Verificato
                               </span>
                             )}
                             {userData.banned && (
                               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
                                 <ExclamationTriangleIcon className="h-3 w-3 mr-1" />
-                                Banned
+                                Bannato
                               </span>
                             )}
                             {!userData.verified && !userData.banned && (
                               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                Pending
+                                In Attesa
                               </span>
                             )}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           <div className="space-y-1">
-                            <div>{userData._count.wines} wines listed</div>
-                            <div className="text-gray-500">{userData._count.orders} orders placed</div>
+                            <div>{userData._count.wines} vini in vendita</div>
+                            <div className="text-gray-500">{userData._count.orders} ordini effettuati</div>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -496,13 +496,13 @@ export default function UsersManagement() {
                             <button
                               onClick={() => handleEditUser(userData)}
                               className="p-2 text-primary-600 hover:text-primary-900 hover:bg-primary-50 rounded-lg transition-colors"
-                              title="Edit user"
+                              title="Modifica utente"
                             >
                               <PencilIcon className="h-4 w-4" />
                             </button>
                             <button
                               className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-                              title="View details"
+                              title="Vedi dettagli"
                             >
                               <EyeIcon className="h-4 w-4" />
                             </button>
@@ -520,7 +520,7 @@ export default function UsersManagement() {
               <div className="bg-white px-4 py-3 border-t border-gray-200">
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-gray-700">
-                    Showing page {pagination.page} of {pagination.totalPages} ({pagination.total} total users)
+                    Pagina {pagination.page} di {pagination.totalPages} ({pagination.total} utenti totali)
                   </div>
                   <nav className="flex items-center space-x-2">
                     <button
@@ -528,7 +528,7 @@ export default function UsersManagement() {
                       disabled={pagination.page === 1}
                       className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Previous
+                      Precedente
                     </button>
                     <div className="flex items-center space-x-1">
                       {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
@@ -553,7 +553,7 @@ export default function UsersManagement() {
                       disabled={pagination.page === pagination.totalPages}
                       className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Next
+                      Successiva
                     </button>
                   </nav>
                 </div>

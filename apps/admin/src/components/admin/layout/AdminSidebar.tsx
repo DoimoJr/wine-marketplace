@@ -38,6 +38,7 @@ const navigation: SidebarItem[] = [
   { name: 'Users', href: '/users', icon: UsersIcon },
   { name: 'Wines', href: '/wines', icon: ShoppingBagIcon },
   { name: 'Orders', href: '/orders', icon: TruckIcon },
+  { name: 'Refunds', href: '/refunds', icon: CurrencyDollarIcon },
   { 
     name: 'Customer Service', 
     href: '/support', 
@@ -53,7 +54,6 @@ const navigation: SidebarItem[] = [
     href: '/finance', 
     icon: CurrencyDollarIcon,
     children: [
-      { name: 'Refunds', href: '/finance/refunds', icon: CurrencyDollarIcon },
       { name: 'Reports', href: '/finance/reports', icon: ChartBarIcon },
       { name: 'Revenue', href: '/finance/revenue', icon: ChartBarIcon }
     ]

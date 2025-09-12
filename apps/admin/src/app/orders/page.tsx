@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import AdminLayout from '@/components/admin/layout/AdminLayout'
@@ -15,7 +16,8 @@ import {
   CheckCircleIcon,
   ClockIcon,
   ExclamationTriangleIcon,
-  CreditCardIcon
+  CreditCardIcon,
+  BanknotesIcon
 } from '@heroicons/react/24/outline'
 
 interface OrderItem {
@@ -104,6 +106,7 @@ export default function OrdersManagement() {
 
   const { user } = useAuth()
   const toast = useToast()
+  const router = useRouter()
 
   useEffect(() => {
     fetchOrders()
@@ -262,7 +265,7 @@ export default function OrdersManagement() {
       const token = localStorage.getItem('adminToken')
       if (!token) return
 
-      const response = await fetch('http://localhost:3010/api/admin/orders?page=1&limit=1', {
+      const response = await fetch('http://localhost:3010/api/admin/orders/stats', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -273,10 +276,10 @@ export default function OrdersManagement() {
         const data = await response.json()
         setFilterCounts({
           all: data.total || 0,
-          pending: Math.floor((data.total || 0) * 0.4),
-          shipped: Math.floor((data.total || 0) * 0.3),
-          delivered: Math.floor((data.total || 0) * 0.2),
-          cancelled: Math.floor((data.total || 0) * 0.1)
+          pending: data.pending || 0,
+          shipped: data.shipped || 0,
+          delivered: data.delivered || 0,
+          cancelled: data.cancelled || 0
         })
       }
     } catch (error) {
@@ -347,6 +350,26 @@ export default function OrdersManagement() {
     return <IconComponent className="h-4 w-4" />
   }
 
+  const getRefundBadgeColor = (status: string) => {
+    const colors = {
+      PENDING: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+      APPROVED: 'bg-green-100 text-green-800 border-green-200',
+      DENIED: 'bg-red-100 text-red-800 border-red-200',
+      PROCESSED: 'bg-blue-100 text-blue-800 border-blue-200',
+    }
+    return colors[status as keyof typeof colors] || colors.PENDING
+  }
+
+  const hasRefunds = (order: Order) => {
+    return order.refundRequests && order.refundRequests.length > 0
+  }
+
+  const getRefundStatus = (order: Order) => {
+    if (!hasRefunds(order)) return null
+    const latestRefund = order.refundRequests![0] // Assuming refundRequests are ordered by latest first
+    return latestRefund
+  }
+
   const filteredOrders = getFilteredOrders()
 
   return (
@@ -356,15 +379,15 @@ export default function OrdersManagement() {
           {/* Header Actions */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Order Management</h1>
-              <p className="text-gray-600">Monitor and manage all marketplace orders</p>
+              <h1 className="text-2xl font-bold text-gray-900">Gestione Ordini</h1>
+              <p className="text-gray-600">Monitora e gestisci tutti gli ordini del marketplace</p>
             </div>
             <div className="flex items-center space-x-3">
               <div className="relative">
                 <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search orders..."
+                  placeholder="Cerca ordini..."
                   value={searchTerm}
                   onChange={handleSearch}
                   className="pl-10 pr-4 py-2 w-64 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
@@ -377,11 +400,11 @@ export default function OrdersManagement() {
           <div className="border-b border-gray-200">
             <nav className="-mb-px flex space-x-8">
               {[
-                { key: 'all', label: 'All Orders', count: filterCounts.all },
-                { key: 'pending', label: 'Pending', count: filterCounts.pending },
-                { key: 'shipped', label: 'Shipped', count: filterCounts.shipped },
-                { key: 'delivered', label: 'Delivered', count: filterCounts.delivered },
-                { key: 'cancelled', label: 'Cancelled', count: filterCounts.cancelled }
+                { key: 'all', label: 'Tutti gli Ordini', count: filterCounts.all },
+                { key: 'pending', label: 'In Attesa', count: filterCounts.pending },
+                { key: 'shipped', label: 'Spediti', count: filterCounts.shipped },
+                { key: 'delivered', label: 'Consegnati', count: filterCounts.delivered },
+                { key: 'cancelled', label: 'Annullati', count: filterCounts.cancelled }
               ].map((tab) => (
                 <button
                   key={tab.key}
@@ -403,14 +426,14 @@ export default function OrdersManagement() {
             {loading ? (
               <div className="p-12 text-center">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-                <p className="mt-2 text-gray-500">Loading orders...</p>
+                <p className="mt-2 text-gray-500">Caricamento ordini...</p>
               </div>
             ) : filteredOrders.length === 0 ? (
               <div className="p-12 text-center">
                 <ShoppingBagIcon className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No orders found</h3>
+                <h3 className="mt-2 text-sm font-medium text-gray-900">Nessun ordine trovato</h3>
                 <p className="mt-1 text-sm text-gray-500">
-                  {searchTerm ? 'Try adjusting your search terms' : 'No orders match the selected filter'}
+                  {searchTerm ? 'Prova a modificare i termini di ricerca' : 'Nessun ordine corrisponde al filtro selezionato'}
                 </p>
               </div>
             ) : (
@@ -419,25 +442,25 @@ export default function OrdersManagement() {
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Order
+                        Ordine
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Customer
+                        Cliente
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Items
+                        Articoli
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Total
+                        Totale
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
+                        Stato
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Date
+                        Data
                       </th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
+                        Azioni
                       </th>
                     </tr>
                   </thead>
@@ -454,7 +477,7 @@ export default function OrdersManagement() {
                                 {orderData.orderNumber}
                               </div>
                               <div className="text-sm text-gray-500">
-                                {orderData.trackingNumber ? `Tracking: ${orderData.trackingNumber}` : 'No tracking'}
+                                {orderData.trackingNumber ? `Codice: ${orderData.trackingNumber}` : 'Nessun codice'}
                               </div>
                             </div>
                           </div>
@@ -465,7 +488,7 @@ export default function OrdersManagement() {
                           </div>
                           <div className="text-sm text-gray-500">{orderData.buyer.email}</div>
                           <div className="text-xs text-gray-400">
-                            Seller: {orderData.seller.firstName} {orderData.seller.lastName}
+                            Venditore: {orderData.seller.firstName} {orderData.seller.lastName}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -478,16 +501,22 @@ export default function OrdersManagement() {
                                 </div>
                               ))
                             ) : (
-                              <span className="text-gray-500">No items</span>
+                              <span className="text-gray-500">Nessun articolo</span>
                             )}
                           </div>
                           <div className="flex items-center gap-2 mt-2">
                             <span className="text-xs text-gray-500">
-                              {orderData._count?.items || 0} item{(orderData._count?.items || 0) !== 1 ? 's' : ''}
+                              {orderData._count?.items || 0} articol{(orderData._count?.items || 0) !== 1 ? 'i' : 'o'}
                             </span>
                             {(orderData._count?.messages || 0) > 0 && (
                               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                {orderData._count?.messages || 0} message{(orderData._count?.messages || 0) !== 1 ? 's' : ''}
+                                {orderData._count?.messages || 0} messaggio{(orderData._count?.messages || 0) !== 1 ? 'i' : ''}
+                              </span>
+                            )}
+                            {hasRefunds(orderData) && (
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${getRefundBadgeColor(getRefundStatus(orderData)!.status)}`}>
+                                <BanknotesIcon className="h-3 w-3 mr-1" />
+                                Rimborso {getRefundStatus(orderData)!.status}
                               </span>
                             )}
                           </div>
@@ -497,7 +526,7 @@ export default function OrdersManagement() {
                             €{(Number(orderData.totalAmount) || 0).toFixed(2)}
                           </div>
                           <div className="text-xs text-gray-500">
-                            +€{(Number(orderData.shippingFee) || 0).toFixed(2)} shipping
+                            +€{(Number(orderData.shippingFee) || 0).toFixed(2)} spedizione
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -514,13 +543,14 @@ export default function OrdersManagement() {
                             <button
                               onClick={() => handleEditOrder(orderData)}
                               className="p-2 text-primary-600 hover:text-primary-900 hover:bg-primary-50 rounded-lg transition-colors"
-                              title="Edit order"
+                              title="Modifica ordine"
                             >
                               <PencilIcon className="h-4 w-4" />
                             </button>
                             <button
+                              onClick={() => router.push(`/orders/${orderData.id}`)}
                               className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-                              title="View details"
+                              title="Vedi dettagli"
                             >
                               <EyeIcon className="h-4 w-4" />
                             </button>
@@ -538,7 +568,7 @@ export default function OrdersManagement() {
               <div className="bg-white px-4 py-3 border-t border-gray-200">
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-gray-700">
-                    Showing page {pagination.page} of {pagination.totalPages} ({pagination.total} total orders)
+                    Pagina {pagination.page} di {pagination.totalPages} ({pagination.total} ordini totali)
                   </div>
                   <nav className="flex items-center space-x-2">
                     <button
@@ -546,7 +576,7 @@ export default function OrdersManagement() {
                       disabled={pagination.page === 1}
                       className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Previous
+                      Precedente
                     </button>
                     <div className="flex items-center space-x-1">
                       {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
@@ -571,7 +601,7 @@ export default function OrdersManagement() {
                       disabled={pagination.page === pagination.totalPages}
                       className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Next
+                      Successiva
                     </button>
                   </nav>
                 </div>
