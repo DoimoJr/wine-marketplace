@@ -1,4 +1,4 @@
-const { PrismaClient } = require('./packages/database/node_modules/@prisma/client');
+const { PrismaClient } = require('../../../packages/database/node_modules/@prisma/client');
 const prisma = new PrismaClient();
 
 async function createRefundRequests() {

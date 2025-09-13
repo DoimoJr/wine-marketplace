@@ -209,13 +209,12 @@ export class AdminFiltersDto {
 
 export class RefundFiltersDto {
   @ApiPropertyOptional({
-    description: 'Filter by refund status',
+    description: 'Filter by refund status (single value or array)',
     enum: RefundStatus,
-    isArray: true,
+    type: 'string',
   })
   @IsOptional()
-  @IsEnum(RefundStatus, { each: true })
-  status?: RefundStatus[];
+  status?: RefundStatus | RefundStatus[];
 
   @ApiPropertyOptional({
     description: 'Filter by refund reason',

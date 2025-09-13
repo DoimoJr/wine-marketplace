@@ -1,40 +1,11 @@
 import Link from 'next/link'
+import Navbar from '../components/Navbar'
+import Footer from '../components/Footer'
 
 export default function Home() {
   return (
-    <div className="min-h-screen">
-      {/* Navigation */}
-      <nav className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <h1 className="text-2xl font-bold text-wine-700">Wine Marketplace</h1>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Link 
-                href="/browse" 
-                className="text-gray-700 hover:text-wine-600 px-3 py-2 rounded-md text-sm font-medium"
-              >
-                Browse Wines
-              </Link>
-              <Link 
-                href="/sell" 
-                className="text-gray-700 hover:text-wine-600 px-3 py-2 rounded-md text-sm font-medium"
-              >
-                Sell Wine
-              </Link>
-              <Link 
-                href="/login" 
-                className="text-white bg-wine-600 hover:bg-wine-700 px-4 py-2 rounded-md text-sm font-medium"
-              >
-                Sign In
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-white">
+      <Navbar currentPage="home" />
 
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-wine-50 to-gold-50">
@@ -119,14 +90,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="bg-gray-50">
-        <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-          <div className="text-center text-gray-500">
-            <p>&copy; 2024 Wine Marketplace. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }

@@ -233,12 +233,12 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          {/* Quick Actions */}
+        {/* Quick Actions - Full Width */}
+        <div className="mb-8">
           <div className="bg-white shadow-sm rounded-xl border border-gray-100">
             <div className="p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-6">Quick Actions</h3>
-              <div className="grid grid-cols-1 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Link
                   href="/users"
                   className="flex items-center justify-between p-4 border-2 border-gray-100 rounded-lg hover:border-primary-200 hover:bg-primary-50 transition-all duration-200 group"
@@ -286,29 +286,6 @@ export default function AdminDashboard() {
                   </div>
                   <span className="text-gray-400">→</span>
                 </Link>
-              </div>
-            </div>
-          </div>
-
-          {/* Recent Activity */}
-          <div className="bg-white shadow-sm rounded-xl border border-gray-100">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
-                <button className="text-sm text-primary-600 hover:text-primary-700">View all</button>
-              </div>
-              <div className="space-y-4">
-                {recentActivity.map((activity) => (
-                  <div key={activity.id} className="flex items-start space-x-3">
-                    <div className={`flex-shrink-0 w-8 h-8 ${getActivityColor(activity.type)} rounded-full flex items-center justify-center`}>
-                      <span className="text-white text-sm">{getActivityIcon(activity.type)}</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900">{activity.message}</p>
-                      <p className="text-xs text-gray-500">{formatTimeAgo(activity.timestamp)}</p>
-                    </div>
-                  </div>
-                ))}
               </div>
             </div>
           </div>

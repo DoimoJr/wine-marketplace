@@ -53,7 +53,7 @@ interface WineEditModalProps {
 
 const WINE_TYPES = ['RED', 'WHITE', 'ROSE', 'SPARKLING', 'DESSERT', 'FORTIFIED']
 const WINE_CONDITIONS = ['EXCELLENT', 'VERY_GOOD', 'GOOD', 'FAIR']
-const WINE_STATUS = ['PENDING', 'ACTIVE', 'INACTIVE', 'REJECTED']
+const WINE_STATUS = ['ACTIVE', 'SOLD', 'RESERVED', 'INACTIVE']
 
 export default function WineEditModal({ isOpen, onClose, wine, onWineUpdated }: WineEditModalProps) {
   const [loading, setLoading] = useState(false)
@@ -72,7 +72,7 @@ export default function WineEditModal({ isOpen, onClose, wine, onWineUpdated }: 
     wineType: 'RED',
     condition: 'EXCELLENT',
     quantity: 1,
-    status: 'PENDING',
+    status: 'ACTIVE',
     images: [] as string[],
     adminNotes: ''
   })
@@ -100,7 +100,7 @@ export default function WineEditModal({ isOpen, onClose, wine, onWineUpdated }: 
         wineType: wine.wineType || 'RED',
         condition: wine.condition || 'EXCELLENT',
         quantity: wine.quantity || 1,
-        status: wine.status || 'PENDING',
+        status: wine.status || 'ACTIVE',
         images: wine.images || [],
         adminNotes: ''
       })
@@ -226,7 +226,7 @@ export default function WineEditModal({ isOpen, onClose, wine, onWineUpdated }: 
   const handleStatusChange = async (newStatus: string) => {
     if (!wine || !currentAdmin) return
 
-    if (newStatus === 'REJECTED') {
+    if (newStatus === 'INACTIVE') {
       setShowRejectConfirm(true)
       return
     }
@@ -278,7 +278,7 @@ export default function WineEditModal({ isOpen, onClose, wine, onWineUpdated }: 
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          status: 'REJECTED',
+          status: 'INACTIVE',
           adminNotes: rejectReason
         })
       })
@@ -301,20 +301,20 @@ export default function WineEditModal({ isOpen, onClose, wine, onWineUpdated }: 
 
   const getStatusColor = (status: string) => {
     const colors = {
-      PENDING: 'bg-yellow-100 text-yellow-800',
+      SOLD: 'bg-yellow-100 text-yellow-800',
       ACTIVE: 'bg-green-100 text-green-800',
       INACTIVE: 'bg-gray-100 text-gray-800',
-      REJECTED: 'bg-red-100 text-red-800'
+      RESERVED: 'bg-red-100 text-red-800'
     }
-    return colors[status as keyof typeof colors] || colors.PENDING
+    return colors[status as keyof typeof colors] || colors.ACTIVE
   }
 
   const getStatusIcon = (status: string) => {
     const icons = {
-      PENDING: ClockIcon,
+      SOLD: ClockIcon,
       ACTIVE: CheckCircleIcon,
       INACTIVE: XCircleIcon,
-      REJECTED: XCircleIcon
+      RESERVED: TagIcon
     }
     return icons[status as keyof typeof icons] || ClockIcon
   }
@@ -338,11 +338,11 @@ export default function WineEditModal({ isOpen, onClose, wine, onWineUpdated }: 
           >
             Cancel
           </button>
-          {wine.status === 'PENDING' && (
+          {wine.status === 'ACTIVE' && (
             <>
               <button
                 type="button"
-                onClick={() => handleStatusChange('REJECTED')}
+                onClick={() => handleStatusChange('INACTIVE')}
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
               >
                 Reject

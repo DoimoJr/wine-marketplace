@@ -691,8 +691,11 @@ export class AdminService {
     
     const where: any = {};
 
-    if (status && status.length > 0) {
-      where.status = { in: status };
+    if (status) {
+      const statusArray = Array.isArray(status) ? status : [status];
+      if (statusArray.length > 0) {
+        where.status = { in: statusArray };
+      }
     }
 
     if (reason && reason.length > 0) {

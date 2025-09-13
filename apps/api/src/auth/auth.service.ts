@@ -158,6 +158,82 @@ export class AuthService {
     }
   }
 
+  async refreshToken(refreshToken: string): Promise<any> {
+    try {
+      const payload = this.jwtService.verify(refreshToken);
+      const user = await this.prisma.user.findUnique({
+        where: { id: payload.sub },
+      });
+
+      if (!user || user.banned) {
+        throw new UnauthorizedException('Invalid refresh token');
+      }
+
+      const tokens = await this.generateTokens(user);
+      return {
+        user: this.excludePassword(user),
+        ...tokens,
+      };
+    } catch (error) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+  }
+
+  async forgotPassword(email: string): Promise<any> {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      // Don't reveal if user exists or not
+      return { message: 'If this email exists, a password reset link has been sent' };
+    }
+
+    // Generate reset token (valid for 1 hour)
+    const resetToken = this.jwtService.sign(
+      { sub: user.id, type: 'password-reset' },
+      { expiresIn: '1h' }
+    );
+
+    // TODO: Send email with reset token
+    // For now, just return the token (in production, this would be sent via email)
+    return { 
+      message: 'If this email exists, a password reset link has been sent',
+      resetToken // Remove this in production
+    };
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<any> {
+    try {
+      const payload = this.jwtService.verify(token);
+      
+      if (payload.type !== 'password-reset') {
+        throw new UnauthorizedException('Invalid reset token');
+      }
+
+      const user = await this.prisma.user.findUnique({
+        where: { id: payload.sub },
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('Invalid reset token');
+      }
+
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      // Update password
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { hashedPassword },
+      });
+
+      return { message: 'Password reset successful' };
+    } catch (error) {
+      throw new UnauthorizedException('Invalid or expired reset token');
+    }
+  }
+
   private excludePassword(user: any) {
     const { hashedPassword, ...result } = user;
     return result;

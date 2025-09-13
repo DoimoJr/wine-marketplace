@@ -126,7 +126,7 @@ export default function WinesManagement() {
             wineType: 'RED',
             condition: 'EXCELLENT',
             quantity: 1,
-            status: 'PENDING',
+            status: 'ACTIVE',
             images: [
               'https://images.unsplash.com/photo-1558346648-9757f2fa4c24?w=400&h=600',
               'https://images.unsplash.com/photo-1586370434639-0fe43b2d32d6?w=400&h=600'
@@ -183,7 +183,7 @@ export default function WinesManagement() {
             wineType: 'RED',
             condition: 'FAIR',
             quantity: 100,
-            status: 'REJECTED',
+            status: 'INACTIVE',
             images: [],
             seller: {
               id: 'seller3',
@@ -212,33 +212,33 @@ export default function WinesManagement() {
       if (!token) return
 
       // Fetch counts for each status
-      const [allResponse, pendingResponse, activeResponse, rejectedResponse] = await Promise.all([
+      const [allResponse, soldResponse, activeResponse, inactiveResponse] = await Promise.all([
         fetch('http://localhost:3010/api/admin/wines?page=1&limit=1', {
           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
         }),
-        fetch('http://localhost:3010/api/admin/wines?page=1&limit=1&status=PENDING', {
+        fetch('http://localhost:3010/api/admin/wines?page=1&limit=1&status=SOLD', {
           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
         }),
         fetch('http://localhost:3010/api/admin/wines?page=1&limit=1&status=ACTIVE', {
           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
         }),
-        fetch('http://localhost:3010/api/admin/wines?page=1&limit=1&status=REJECTED', {
+        fetch('http://localhost:3010/api/admin/wines?page=1&limit=1&status=INACTIVE', {
           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
         })
       ])
 
-      const [allData, pendingData, activeData, rejectedData] = await Promise.all([
+      const [allData, soldData, activeData, inactiveData] = await Promise.all([
         allResponse.ok ? allResponse.json() : { total: 0 },
-        pendingResponse.ok ? pendingResponse.json() : { total: 0 },
+        soldResponse.ok ? soldResponse.json() : { total: 0 },
         activeResponse.ok ? activeResponse.json() : { total: 0 },
-        rejectedResponse.ok ? rejectedResponse.json() : { total: 0 }
+        inactiveResponse.ok ? inactiveResponse.json() : { total: 0 }
       ])
 
       setFilterCounts({
         all: allData.total || 0,
-        pending: pendingData.total || 0,
+        pending: soldData.total || 0,
         active: activeData.total || 0,
-        rejected: rejectedData.total || 0
+        rejected: inactiveData.total || 0
       })
     } catch (error) {
       console.error('Error fetching filter counts:', error)
@@ -277,20 +277,20 @@ export default function WinesManagement() {
 
   const getStatusColor = (status: string) => {
     const colors = {
-      PENDING: 'bg-yellow-100 text-yellow-800',
+      SOLD: 'bg-yellow-100 text-yellow-800',
       ACTIVE: 'bg-green-100 text-green-800',
       INACTIVE: 'bg-gray-100 text-gray-800',
-      REJECTED: 'bg-red-100 text-red-800'
+      RESERVED: 'bg-red-100 text-red-800'
     }
-    return colors[status as keyof typeof colors] || colors.PENDING
+    return colors[status as keyof typeof colors] || colors.ACTIVE
   }
 
   const getStatusIcon = (status: string) => {
     const icons = {
-      PENDING: ClockIcon,
+      SOLD: ClockIcon,
       ACTIVE: CheckCircleIcon,
       INACTIVE: XCircleIcon,
-      REJECTED: XCircleIcon
+      RESERVED: TagIcon
     }
     const Icon = icons[status as keyof typeof icons] || ClockIcon
     return <Icon className="h-3 w-3 mr-1" />

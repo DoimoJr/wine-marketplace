@@ -49,24 +49,6 @@ const navigation: SidebarItem[] = [
       { name: 'Disputes', href: '/support/disputes', icon: ExclamationTriangleIcon }
     ]
   },
-  { 
-    name: 'Finance', 
-    href: '/finance', 
-    icon: CurrencyDollarIcon,
-    children: [
-      { name: 'Reports', href: '/finance/reports', icon: ChartBarIcon },
-      { name: 'Revenue', href: '/finance/revenue', icon: ChartBarIcon }
-    ]
-  },
-  { 
-    name: 'Marketing', 
-    href: '/marketing', 
-    icon: TagIcon,
-    children: [
-      { name: 'Campaigns', href: '/marketing/campaigns', icon: TagIcon },
-      { name: 'Promotions', href: '/marketing/promotions', icon: TagIcon }
-    ]
-  },
   { name: 'Analytics', href: '/analytics', icon: ChartBarIcon },
   { name: 'System Logs', href: '/logs', icon: DocumentTextIcon },
   { name: 'Settings', href: '/settings', icon: CogIcon }

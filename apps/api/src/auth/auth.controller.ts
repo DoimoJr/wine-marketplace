@@ -80,4 +80,26 @@ export class AuthController {
     const frontendUrl = process.env.WEB_URL || 'http://localhost:3000';
     res.redirect(`${frontendUrl}/auth/callback?token=${tokens.accessToken}`);
   }
+
+  @Public()
+  @Post('refresh')
+  @ApiOperation({ summary: 'Refresh access token' })
+  @ApiResponse({ status: 200, description: 'Token refreshed successfully', type: AuthResponseDto })
+  async refreshToken(@Body() body: { refreshToken: string }): Promise<AuthResponseDto> {
+    return this.authService.refreshToken(body.refreshToken);
+  }
+
+  @Public()
+  @Post('forgot-password')
+  @ApiOperation({ summary: 'Request password reset' })
+  async forgotPassword(@Body() body: { email: string }) {
+    return this.authService.forgotPassword(body.email);
+  }
+
+  @Public()
+  @Post('reset-password')
+  @ApiOperation({ summary: 'Reset password with token' })
+  async resetPassword(@Body() body: { token: string; password: string }) {
+    return this.authService.resetPassword(body.token, body.password);
+  }
 }
