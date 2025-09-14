@@ -27,7 +27,7 @@ interface OrderItem {
   wine: {
     id: string
     title: string
-    vintage: number
+    annata: number
     region: string
     images?: string[]
   }
@@ -188,7 +188,7 @@ export default function OrdersManagement() {
                 wine: {
                   id: '1',
                   title: 'Château Margaux',
-                  vintage: 2015,
+                  annata: 2015,
                   region: 'Bordeaux',
                   images: ['https://images.unsplash.com/photo-1586370434639-0fe43b2d32d6?w=300&h=300&fit=crop']
                 }
@@ -240,7 +240,7 @@ export default function OrdersManagement() {
                 wine: {
                   id: '2',
                   title: 'Chianti Classico',
-                  vintage: 2020,
+                  annata: 2020,
                   region: 'Tuscany',
                   images: ['https://images.unsplash.com/photo-1551524164-687a55dd1126?w=300&h=300&fit=crop']
                 }
@@ -496,7 +496,7 @@ export default function OrdersManagement() {
                             {orderData.items && orderData.items.length > 0 ? (
                               orderData.items.map((item, index) => (
                                 <div key={item.id} className="flex items-center space-x-2 mb-1">
-                                  <span>{item.wine.title} ({item.wine.vintage})</span>
+                                  <span>{item.wine.title} ({item.wine.annata})</span>
                                   <span className="text-gray-500">×{item.quantity}</span>
                                 </div>
                               ))

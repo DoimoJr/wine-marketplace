@@ -264,4 +264,40 @@ export class AdminController {
   ): Promise<any> {
     return this.adminService.processOrderRefund(orderId, processOrderRefundDto, admin.id);
   }
+
+  @Post('users/bulk-ban')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Ban multiple users' })
+  @ApiResponse({ status: 200, description: 'Users banned successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid user IDs' })
+  bulkBanUsers(
+    @Body() body: { userIds: string[] },
+    @CurrentUser() admin: any,
+  ): Promise<any> {
+    return this.adminService.bulkBanUsers(body.userIds, admin.id);
+  }
+
+  @Post('users/bulk-verify')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Verify multiple users' })
+  @ApiResponse({ status: 200, description: 'Users verified successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid user IDs' })
+  bulkVerifyUsers(
+    @Body() body: { userIds: string[] },
+    @CurrentUser() admin: any,
+  ): Promise<any> {
+    return this.adminService.bulkVerifyUsers(body.userIds, admin.id);
+  }
+
+  @Post('users/bulk-unverify')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Unverify multiple users' })
+  @ApiResponse({ status: 200, description: 'Users unverified successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid user IDs' })
+  bulkUnverifyUsers(
+    @Body() body: { userIds: string[] },
+    @CurrentUser() admin: any,
+  ): Promise<any> {
+    return this.adminService.bulkUnverifyUsers(body.userIds, admin.id);
+  }
 }

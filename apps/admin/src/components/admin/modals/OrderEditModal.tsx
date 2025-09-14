@@ -26,7 +26,7 @@ interface OrderItem {
   wine: {
     id: string
     title: string
-    vintage: number
+    annata: number
     region: string
     images?: string[]
   }
@@ -423,7 +423,7 @@ export default function OrderEditModal({ isOpen, onClose, order, onOrderUpdated 
                 <div className="flex-1">
                   <div className="font-medium text-gray-900">{item.wine.title}</div>
                   <div className="text-sm text-gray-600">
-                    {item.wine.vintage} • {item.wine.region}
+                    {item.wine.annata} • {item.wine.region}
                   </div>
                   <div className="text-sm text-gray-600">
                     Quantity: {item.quantity} • €{(Number(item.price) || 0).toFixed(2)} each

@@ -16,7 +16,7 @@ export default function Home() {
               <span className="block text-wine-600">Buy & Sell with Confidence</span>
             </h1>
             <p className="mt-3 max-w-md mx-auto text-base text-gray-500 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
-              Connect with wine enthusiasts worldwide. Find rare vintages, sell your collection, 
+              Connect with wine enthusiasts worldwide. Find rare wines, sell your collection, 
               and discover exceptional wines from trusted sellers.
             </p>
             <div className="mt-5 max-w-md mx-auto sm:flex sm:justify-center md:mt-8">

@@ -9,7 +9,7 @@ export default function SellPage() {
     title: '',
     description: '',
     price: '',
-    vintage: '',
+    annata: '',
     region: '',
     country: '',
     producer: '',
@@ -55,7 +55,7 @@ export default function SellPage() {
           title: '',
           description: '',
           price: '',
-          vintage: '',
+          annata: '',
           region: '',
           country: '',
           producer: '',
@@ -231,16 +231,16 @@ export default function SellPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="vintage" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="annata" className="block text-sm font-medium text-gray-700 mb-2">
                     Vintage Year
                   </label>
                   <input
                     type="number"
-                    id="vintage"
-                    name="vintage"
+                    id="annata"
+                    name="annata"
                     min="1800"
                     max={new Date().getFullYear()}
-                    value={formData.vintage}
+                    value={formData.annata}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-wine-500"
                     placeholder="2018"

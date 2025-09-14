@@ -23,9 +23,9 @@ export const isValidPrice = (price: number): boolean => {
   return price > 0 && price <= 10000; // Max 10k EUR
 };
 
-export const isValidVintage = (vintage: number): boolean => {
+export const isValidVintage = (annata: number): boolean => {
   const currentYear = new Date().getFullYear();
-  return vintage >= 1800 && vintage <= currentYear;
+  return annata >= 1800 && annata <= currentYear;
 };
 
 export const isValidPostalCode = (postalCode: string, country: string): boolean => {

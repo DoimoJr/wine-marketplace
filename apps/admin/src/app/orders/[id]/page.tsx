@@ -39,7 +39,7 @@ interface OrderDetail {
     wine: {
       id: string
       title: string
-      vintage: number
+      annata: number
       producer: string
       region: string
       country: string
@@ -239,7 +239,7 @@ export default function OrderDetailPage() {
                       <div className="flex-1">
                         <h3 className="text-lg font-medium text-gray-900">{item.wine.title}</h3>
                         <p className="text-sm text-gray-600">
-                          {item.wine.vintage} • {item.wine.producer} • {item.wine.region}, {item.wine.country}
+                          {item.wine.annata} • {item.wine.producer} • {item.wine.region}, {item.wine.country}
                         </p>
                         <p className="text-sm text-gray-600">Condition: {item.wine.condition}</p>
                         <div className="mt-2 flex items-center justify-between">

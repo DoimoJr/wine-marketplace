@@ -45,7 +45,7 @@ interface RefundRequest {
     items: Array<{
       wine: {
         title: string
-        vintage?: number
+        annata?: number
         region?: string
       }
     }>

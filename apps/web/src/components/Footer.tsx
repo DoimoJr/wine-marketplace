@@ -9,7 +9,7 @@ export default function Footer() {
           <div className="col-span-1 md:col-span-2">
             <h3 className="text-2xl font-bold text-wine-700 mb-4">Wine Marketplace</h3>
             <p className="text-gray-600 mb-4 max-w-md">
-              Connect with wine enthusiasts worldwide. Find rare vintages, sell your collection, 
+              Connect with wine enthusiasts worldwide. Find rare wines, sell your collection, 
               and discover exceptional wines from trusted sellers.
             </p>
             <div className="flex space-x-4">

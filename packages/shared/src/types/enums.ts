@@ -35,7 +35,7 @@ export enum WineStatus {
 export enum WineSortBy {
   CREATED_AT = 'CREATED_AT',
   PRICE = 'PRICE',
-  VINTAGE = 'VINTAGE',
+  ANNATA = 'ANNATA',
   TITLE = 'TITLE',
   RATING = 'RATING',
 }

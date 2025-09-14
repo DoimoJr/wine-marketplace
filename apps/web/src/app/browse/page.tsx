@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Navbar from '../../components/Navbar'
 import WineCard from '../../components/WineCard'
@@ -11,7 +11,7 @@ interface Wine {
   description: string
   price: number
   imageUrl?: string
-  vintage?: number
+  annata?: number
   producer?: string
   region?: string
   country?: string
@@ -29,7 +29,7 @@ export default function BrowsePage() {
     search: '',
     minPrice: '',
     maxPrice: '',
-    vintage: ''
+    annata: ''
   })
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
@@ -49,7 +49,7 @@ export default function BrowsePage() {
         ...(filters.search && { search: filters.search }),
         ...(filters.minPrice && { minPrice: filters.minPrice }),
         ...(filters.maxPrice && { maxPrice: filters.maxPrice }),
-        ...(filters.vintage && { vintage: filters.vintage })
+        ...(filters.annata && { annataMin: filters.annata })
       })
 
       const response = await fetch(`/api/wines?${queryParams}`)
@@ -152,9 +152,9 @@ export default function BrowsePage() {
 
               <input 
                 type="number"
-                placeholder="Vintage Year"
-                value={filters.vintage}
-                onChange={(e) => handleFilterChange('vintage', e.target.value)}
+                placeholder="Annata"
+                value={filters.annata}
+                onChange={(e) => handleFilterChange('annata', e.target.value)}
                 className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-wine-500"
               />
 
@@ -189,8 +189,8 @@ export default function BrowsePage() {
             <option>Sort by: Most Recent</option>
             <option>Price: Low to High</option>
             <option>Price: High to Low</option>
-            <option>Vintage: Newest First</option>
-            <option>Vintage: Oldest First</option>
+            <option>Annata: Più Recenti</option>
+            <option>Annata: Più Vecchie</option>
           </select>
         </div>
       </div>
@@ -233,7 +233,7 @@ export default function BrowsePage() {
                       search: '',
                       minPrice: '',
                       maxPrice: '',
-                      vintage: ''
+                      annata: ''
                     })
                     setCurrentPage(1)
                   }}

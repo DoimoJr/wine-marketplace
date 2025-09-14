@@ -155,3 +155,125 @@ This project has 5 configured MCP servers that should be used proactively:
 5. **API calls** → Use Fetch MCP for external requests
 
 **Rule**: When multiple approaches exist, always prefer MCP server capabilities over basic tools.
+
+## Web App Development Roadmap
+
+### Current State Analysis
+The web application currently has:
+- ✅ **Homepage** (`/`) - Basic landing page
+- ✅ **Browse wines** (`/browse`) - Wine listing with filters (annata, region, price)
+- ✅ **Sell wine** (`/sell`) - Wine listing creation
+- ✅ **Authentication** - Login page with NextAuth integration
+- ✅ **API Integration** - Wines, Auth, Upload endpoints connected
+
+### 🚨 CRITICAL Features (Must implement first)
+
+#### 1. **Wine Product Page** (`/wines/[id]`)
+- **Status**: Missing
+- **API**: `GET /wines/:id` available  
+- **Components needed**:
+  - Wine detail view with full information
+  - Image gallery component
+  - Add to cart button
+  - Seller contact information
+- **Priority**: Highest - Users can't view wine details or purchase
+
+#### 2. **Shopping Cart System** (`/cart`)
+- **Status**: Missing (API exists)
+- **API**: `GET /orders/cart`, `POST /orders/cart/add`, `PATCH /orders/cart/update`
+- **Components needed**:
+  - Cart page with wine list
+  - Quantity controls
+  - Price calculation
+  - Remove items functionality
+- **Priority**: Highest - No way to collect items for purchase
+
+#### 3. **Checkout Process** (`/checkout`)
+- **Status**: Missing
+- **API**: `POST /orders` available, PaymentService implemented
+- **Components needed**:
+  - Shipping address form
+  - Payment method selection
+  - Order summary
+  - Payment integration (PayPal/Stripe)
+- **Priority**: Highest - Users can't complete purchases
+
+#### 4. **User Profile** (`/profile`)
+- **Status**: Missing
+- **API**: `GET /users/profile`, `PATCH /users/profile` available
+- **Components needed**:
+  - Profile information editor
+  - My wines listed section  
+  - My purchase history
+  - Account settings
+- **Priority**: High - Users need profile management
+
+#### 5. **User Registration** (`/register`)
+- **Status**: Missing (only login exists)
+- **API**: `POST /auth/register` available
+- **Components needed**:
+  - Registration form
+  - Email verification flow
+  - Welcome onboarding
+- **Priority**: High - New users can't create accounts
+
+### 📋 IMPORTANT Features (Second priority)
+
+#### 6. **Order Management** (`/orders`)
+- **Status**: Missing
+- **API**: `GET /orders`, `GET /orders/:id` available
+- **Components needed**:
+  - Order history list
+  - Order detail view
+  - Tracking information
+  - Order status updates
+
+#### 7. **Messaging System** (`/messages`)
+- **Status**: Missing (WebSocket backend ready)
+- **API**: Messages Gateway with WebSocket support
+- **Components needed**:
+  - Chat interface
+  - Conversation list
+  - Real-time message updates
+  - File/image sharing
+
+#### 8. **Advanced Search & Filters**
+- **Status**: Basic filters exist
+- **API**: Wine filtering already available
+- **Enhancements needed**:
+  - Saved searches
+  - Price range sliders
+  - Multiple wine type selection
+  - Sort by popularity/date/price
+
+### 🎯 NICE-TO-HAVE Features (Third priority)
+
+#### 9. **Reviews & Ratings**
+- **Status**: Database schema exists, no UI
+- **API**: Reviews endpoints available
+- **Components needed**:
+  - Rating system (stars)
+  - Review submission form
+  - Review display on wine pages
+  - Seller reputation system
+
+#### 10. **Wishlist/Favorites**
+- **Status**: Not implemented
+- **API**: Would need new endpoints
+- **Components needed**:
+  - Add/remove from wishlist buttons
+  - Wishlist page
+  - Email notifications for price drops
+
+### Implementation Priority Order
+1. Wine product page → Cart → Checkout (critical purchase flow)
+2. Registration → Profile (user management)  
+3. Orders → Messages (post-purchase experience)
+4. Enhanced search → Reviews → Wishlist (engagement features)
+
+### Technical Notes
+- All API endpoints use the same JWT authentication system
+- Frontend uses NextAuth with credentials provider
+- PaymentService supports multiple payment providers
+- Database schema already supports most features
+- WebSocket messaging system is ready for real-time chat

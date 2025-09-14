@@ -22,7 +22,7 @@ interface Wine {
   title: string
   description: string
   price: number
-  vintage?: number
+  annata?: number
   region?: string
   country?: string
   producer?: string
@@ -62,7 +62,7 @@ export default function WineEditModal({ isOpen, onClose, wine, onWineUpdated }: 
     title: '',
     description: '',
     price: 0,
-    vintage: undefined as number | undefined,
+    annata: undefined as number | undefined,
     region: '',
     country: '',
     producer: '',
@@ -90,7 +90,7 @@ export default function WineEditModal({ isOpen, onClose, wine, onWineUpdated }: 
         title: wine.title || '',
         description: wine.description || '',
         price: wine.price || 0,
-        vintage: wine.vintage,
+        annata: wine.annata,
         region: wine.region || '',
         country: wine.country || '',
         producer: wine.producer || '',
@@ -193,7 +193,7 @@ export default function WineEditModal({ isOpen, onClose, wine, onWineUpdated }: 
           title: formData.title,
           description: formData.description,
           price: formData.price,
-          vintage: formData.vintage,
+          annata: formData.annata,
           region: formData.region,
           country: formData.country,
           producer: formData.producer,
@@ -455,8 +455,8 @@ export default function WineEditModal({ isOpen, onClose, wine, onWineUpdated }: 
               <label className="block text-sm font-medium text-gray-700">Vintage</label>
               <input
                 type="number"
-                value={formData.vintage || ''}
-                onChange={(e) => handleInputChange('vintage', e.target.value ? parseInt(e.target.value) : undefined)}
+                value={formData.annata || ''}
+                onChange={(e) => handleInputChange('annata', e.target.value ? parseInt(e.target.value) : undefined)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               />
             </div>

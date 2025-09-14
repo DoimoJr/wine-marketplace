@@ -40,7 +40,7 @@ interface RefundRequest {
     items: Array<{
       wine: {
         title: string
-        vintage?: number
+        annata?: number
         region?: string
       }
       quantity: number
@@ -238,7 +238,7 @@ export default function RefundDetailsModal({
                 <div key={index} className="flex justify-between items-center text-sm bg-gray-50 p-2 rounded">
                   <div>
                     <div className="font-medium text-gray-900">
-                      {item.wine.title} {item.wine.vintage && `(${item.wine.vintage})`}
+                      {item.wine.title} {item.wine.annata && `(${item.wine.annata})`}
                     </div>
                     {item.wine.region && (
                       <div className="text-gray-500">{item.wine.region}</div>

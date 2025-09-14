@@ -372,7 +372,7 @@ export class AdminUpdateWineDto {
   price?: number;
 
   @ApiPropertyOptional({
-    description: 'Wine vintage year',
+    description: 'Annata del vino',
     example: 2018,
     minimum: 1800,
   })
@@ -381,7 +381,7 @@ export class AdminUpdateWineDto {
   @Min(1800)
   @Max(new Date().getFullYear())
   @Type(() => Number)
-  vintage?: number;
+  annata?: number;
 
   @ApiPropertyOptional({
     description: 'Wine region',

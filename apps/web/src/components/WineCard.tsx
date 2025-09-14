@@ -8,7 +8,7 @@ interface WineCardProps {
     description: string
     price: number
     imageUrl?: string
-    vintage?: number
+    annata?: number
     producer?: string
     region?: string
     country?: string
@@ -75,47 +75,51 @@ export default function WineCard({ wine }: WineCardProps) {
             </div>
           )}
         </div>
+      </Link>
         
-        <div className="p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getWineTypeColor(wine.wineType)}`}>
-              {wine.wineType.toLowerCase().replace('_', ' ')}
-            </span>
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getConditionColor(wine.condition)}`}>
-              {formatCondition(wine.condition)}
-            </span>
-          </div>
+      <div className="p-4">
+        <div className="flex items-center justify-between mb-2">
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getWineTypeColor(wine.wineType)}`}>
+            {wine.wineType.toLowerCase().replace('_', ' ')}
+          </span>
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getConditionColor(wine.condition)}`}>
+            {formatCondition(wine.condition)}
+          </span>
+        </div>
 
-          <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">
+        <Link href={`/wines/${wine.id}`}>
+          <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 hover:text-wine-600 transition-colors cursor-pointer">
             {wine.title}
           </h3>
+        </Link>
 
-          {wine.producer && (
-            <p className="text-sm text-gray-600 mb-1">{wine.producer}</p>
-          )}
+        {wine.producer && (
+          <p className="text-sm text-gray-600 mb-1">{wine.producer}</p>
+        )}
 
-          <div className="flex items-center text-sm text-gray-500 mb-2">
-            {wine.vintage && <span>{wine.vintage}</span>}
-            {wine.vintage && (wine.region || wine.country) && <span className="mx-1">•</span>}
-            {wine.region && <span>{wine.region}</span>}
-            {wine.region && wine.country && <span>, </span>}
-            {wine.country && <span>{wine.country}</span>}
+        <div className="flex items-center text-sm text-gray-500 mb-2">
+          {wine.annata && <span>{wine.annata}</span>}
+          {wine.annata && (wine.region || wine.country) && <span className="mx-1">•</span>}
+          {wine.region && <span>{wine.region}</span>}
+          {wine.region && wine.country && <span>, </span>}
+          {wine.country && <span>{wine.country}</span>}
+        </div>
+
+        <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+          {wine.description}
+        </p>
+
+        <div className="flex items-center justify-between">
+          <div className="text-xl font-bold text-wine-600">
+            {formatPrice(wine.price)}
           </div>
-
-          <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-            {wine.description}
-          </p>
-
-          <div className="flex items-center justify-between">
-            <div className="text-xl font-bold text-wine-600">
-              {formatPrice(wine.price)}
-            </div>
+          <Link href={`/wines/${wine.id}`}>
             <button className="bg-wine-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-wine-700 transition-colors">
               View Details
             </button>
-          </div>
+          </Link>
         </div>
-      </Link>
+      </div>
     </div>
   )
 }

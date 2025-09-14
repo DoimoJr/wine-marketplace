@@ -24,7 +24,7 @@ interface Wine {
   title: string
   description: string
   price: number
-  vintage?: number
+  annata?: number
   region?: string
   country?: string
   producer?: string
@@ -114,9 +114,9 @@ export default function WinesManagement() {
           {
             id: '1',
             title: 'Château Margaux 2015',
-            description: 'Exceptional vintage from one of Bordeaux\'s most prestigious estates',
+            description: 'Exceptional annata from one of Bordeaux\'s most prestigious estates',
             price: 899.99,
-            vintage: 2015,
+            annata: 2015,
             region: 'Margaux',
             country: 'France',
             producer: 'Château Margaux',
@@ -145,7 +145,7 @@ export default function WinesManagement() {
             title: 'Dom Pérignon 2012',
             description: 'Legendary champagne with exceptional aging potential',
             price: 199.99,
-            vintage: 2012,
+            annata: 2012,
             region: 'Champagne',
             country: 'France',
             producer: 'Moët & Chandon',
@@ -173,7 +173,7 @@ export default function WinesManagement() {
             title: 'Fake Wine Listing',
             description: 'Suspicious wine with unclear provenance',
             price: 50.00,
-            vintage: 1900,
+            annata: 1900,
             region: 'Unknown',
             country: 'Unknown',
             producer: 'Fake Producer',
@@ -399,7 +399,7 @@ export default function WinesManagement() {
                             {wine.title}
                           </h3>
                           <p className="text-sm text-gray-600">
-                            {wine.producer} • {wine.vintage}
+                            {wine.producer} • {wine.annata}
                           </p>
                         </div>
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(wine.status)}`}>

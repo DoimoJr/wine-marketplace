@@ -6,7 +6,7 @@ export interface Wine {
   title: string;
   description: string;
   price: number;
-  vintage?: number;
+  annata?: number;
   region?: string;
   country?: string;
   producer?: string;
@@ -35,8 +35,8 @@ export interface WineFilters {
   producer?: string[];
   priceMin?: number;
   priceMax?: number;
-  vintageMin?: number;
-  vintageMax?: number;
+  annataMin?: number;
+  annataMax?: number;
   condition?: WineCondition[];
   alcoholContentMin?: number;
   alcoholContentMax?: number;
@@ -48,7 +48,7 @@ export interface CreateWineRequest {
   title: string;
   description: string;
   price: number;
-  vintage?: number;
+  annata?: number;
   region?: string;
   country?: string;
   producer?: string;
@@ -77,7 +77,7 @@ export interface WineSearchResult {
     producers: string[];
     wineTypes: WineType[];
     priceRange: { min: number; max: number };
-    vintageRange: { min: number; max: number };
+    annataRange: { min: number; max: number };
   };
 }
 

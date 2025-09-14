@@ -626,7 +626,7 @@ export class AdminService {
               select: {
                 id: true,
                 title: true,
-                vintage: true,
+                annata: true,
                 producer: true,
                 region: true,
                 country: true,
@@ -754,7 +754,7 @@ export class AdminService {
                     select: {
                       id: true,
                       title: true,
-                      vintage: true,
+                      annata: true,
                       region: true,
                       images: true,
                     },
@@ -1032,7 +1032,7 @@ export class AdminService {
             wine: {
               select: {
                 title: true,
-                vintage: true,
+                annata: true,
               },
             },
           },
@@ -1092,7 +1092,7 @@ export class AdminService {
                 wine: {
                   select: {
                     title: true,
-                    vintage: true,
+                    annata: true,
                     region: true,
                   },
                 },
@@ -1130,5 +1130,118 @@ export class AdminService {
     });
 
     return refundRequest;
+  }
+
+  async bulkBanUsers(userIds: string[], adminId: string): Promise<any> {
+    if (!userIds || userIds.length === 0) {
+      throw new BadRequestException('No user IDs provided');
+    }
+
+    // Update users to banned status
+    const result = await this.prisma.user.updateMany({
+      where: {
+        id: { in: userIds },
+        // Prevent admins from banning other admins
+        role: UserRole.USER,
+      },
+      data: {
+        banned: true,
+      },
+    });
+
+    // Log admin action for each user
+    const logPromises = userIds.map(userId =>
+      this.prisma.adminLog.create({
+        data: {
+          action: AdminAction.USER_BANNED,
+          details: `User banned via bulk action`,
+          targetType: 'user',
+          targetId: userId,
+          adminId,
+        },
+      })
+    );
+
+    await Promise.all(logPromises);
+
+    return {
+      success: true,
+      bannedCount: result.count,
+      message: `Successfully banned ${result.count} users`,
+    };
+  }
+
+  async bulkVerifyUsers(userIds: string[], adminId: string): Promise<any> {
+    if (!userIds || userIds.length === 0) {
+      throw new BadRequestException('No user IDs provided');
+    }
+
+    // Update users to verified status
+    const result = await this.prisma.user.updateMany({
+      where: {
+        id: { in: userIds },
+      },
+      data: {
+        verified: true,
+      },
+    });
+
+    // Log admin action for each user
+    const logPromises = userIds.map(userId =>
+      this.prisma.adminLog.create({
+        data: {
+          action: AdminAction.USER_VERIFIED,
+          details: `User verified via bulk action`,
+          targetType: 'user',
+          targetId: userId,
+          adminId,
+        },
+      })
+    );
+
+    await Promise.all(logPromises);
+
+    return {
+      success: true,
+      verifiedCount: result.count,
+      message: `Successfully verified ${result.count} users`,
+    };
+  }
+
+  async bulkUnverifyUsers(userIds: string[], adminId: string): Promise<any> {
+    if (!userIds || userIds.length === 0) {
+      throw new BadRequestException('No user IDs provided');
+    }
+
+    // Update users to unverified status
+    const result = await this.prisma.user.updateMany({
+      where: {
+        id: { in: userIds },
+      },
+      data: {
+        verified: false,
+      },
+    });
+
+    // Log admin action for each user
+    const logPromises = userIds.map(userId =>
+      this.prisma.adminLog.create({
+        data: {
+          action: AdminAction.USER_VERIFIED, // We could add USER_UNVERIFIED if needed
+          details: `User unverified via bulk action`,
+          targetType: 'user',
+          targetId: userId,
+          adminId,
+        },
+      })
+    );
+
+    await Promise.all(logPromises);
+
+    return {
+      success: true,
+      unverifiedCount: result.count,
+      message: `Successfully unverified ${result.count} users`,
+    };
   }
 }

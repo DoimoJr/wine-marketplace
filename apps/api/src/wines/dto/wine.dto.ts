@@ -49,16 +49,16 @@ export class CreateWineDto {
   price: number;
 
   @ApiPropertyOptional({
-    description: 'Wine vintage year',
+    description: 'Annata del vino',
     example: 2018,
     minimum: 1800,
   })
   @IsOptional()
   @IsInt()
-  @Min(1800, { message: 'Vintage cannot be earlier than 1800' })
-  @Max(new Date().getFullYear(), { message: 'Vintage cannot be in the future' })
+  @Min(1800, { message: 'Annata cannot be earlier than 1800' })
+  @Max(new Date().getFullYear(), { message: 'Annata cannot be in the future' })
   @Type(() => Number)
-  vintage?: number;
+  annata?: number;
 
   @ApiPropertyOptional({
     description: 'Wine region',
@@ -252,7 +252,7 @@ export class WineFiltersDto {
   priceMax?: number;
 
   @ApiPropertyOptional({
-    description: 'Minimum vintage year',
+    description: 'Annata minima',
     example: 2000,
     minimum: 1800,
   })
@@ -260,10 +260,10 @@ export class WineFiltersDto {
   @IsInt()
   @Min(1800)
   @Type(() => Number)
-  vintageMin?: number;
+  annataMin?: number;
 
   @ApiPropertyOptional({
-    description: 'Maximum vintage year',
+    description: 'Annata massima',
     example: 2020,
     minimum: 1800,
   })
@@ -271,7 +271,7 @@ export class WineFiltersDto {
   @IsInt()
   @Min(1800)
   @Type(() => Number)
-  vintageMax?: number;
+  annataMax?: number;
 
   @ApiPropertyOptional({
     description: 'Wine conditions to filter by',
@@ -288,11 +288,11 @@ export class WineFiltersDto {
   @ApiPropertyOptional({
     description: 'Sort field',
     example: 'price',
-    enum: ['createdAt', 'price', 'vintage', 'title'],
+    enum: ['createdAt', 'price', 'annata', 'title'],
   })
   @IsOptional()
   @IsString()
-  sortBy?: 'createdAt' | 'price' | 'vintage' | 'title';
+  sortBy?: 'createdAt' | 'price' | 'annata' | 'title';
 
   @ApiPropertyOptional({
     description: 'Sort order',

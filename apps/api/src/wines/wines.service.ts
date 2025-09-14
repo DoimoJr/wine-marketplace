@@ -41,8 +41,8 @@ export class WinesService {
       producer,
       priceMin,
       priceMax,
-      vintageMin,
-      vintageMax,
+      annataMin,
+      annataMax,
       condition,
       sortBy = 'createdAt',
       sortOrder = 'desc',
@@ -97,11 +97,11 @@ export class WinesService {
       if (priceMax !== undefined) where.price.lte = priceMax;
     }
 
-    // Vintage range
-    if (vintageMin !== undefined || vintageMax !== undefined) {
-      where.vintage = {};
-      if (vintageMin !== undefined) where.vintage.gte = vintageMin;
-      if (vintageMax !== undefined) where.vintage.lte = vintageMax;
+    // Annata range
+    if (annataMin !== undefined || annataMax !== undefined) {
+      where.annata = {};
+      if (annataMin !== undefined) where.annata.gte = annataMin;
+      if (annataMax !== undefined) where.annata.lte = annataMax;
     }
 
     // Sorting
@@ -327,20 +327,20 @@ export class WinesService {
       }),
     ]);
 
-    // Get price and vintage ranges
+    // Get price and annata ranges
     const priceRange = await this.prisma.wine.aggregate({
       where: { status: WineStatus.ACTIVE },
       _min: { price: true },
       _max: { price: true },
     });
 
-    const vintageRange = await this.prisma.wine.aggregate({
+    const annataRange = await this.prisma.wine.aggregate({
       where: { 
         status: WineStatus.ACTIVE,
-        vintage: { not: null },
+        annata: { not: null },
       },
-      _min: { vintage: true },
-      _max: { vintage: true },
+      _min: { annata: true },
+      _max: { annata: true },
     });
 
     return {
@@ -352,9 +352,9 @@ export class WinesService {
         min: priceRange._min.price || 0,
         max: priceRange._max.price || 1000,
       },
-      vintageRange: {
-        min: vintageRange._min.vintage || 1800,
-        max: vintageRange._max.vintage || new Date().getFullYear(),
+      annataRange: {
+        min: annataRange._min.annata || 1800,
+        max: annataRange._max.annata || new Date().getFullYear(),
       },
     };
   }

@@ -97,51 +97,51 @@ export class OrdersController {
   }
 
   // Shopping Cart endpoints
-  @Get('cart')
-  @ApiOperation({ summary: 'Get current user cart' })
-  @ApiResponse({ status: 200, description: 'Cart retrieved successfully' })
-  getCart(@CurrentUser() user: any): Promise<any> {
-    return this.ordersService.getCart(user.id);
-  }
+  // @Get('cart')
+  // @ApiOperation({ summary: 'Get current user cart' })
+  // @ApiResponse({ status: 200, description: 'Cart retrieved successfully' })
+  // getCart(@CurrentUser() user: any): Promise<any> {
+  //   return this.ordersService.getCart(user.id);
+  // }
 
-  @Post('cart/items')
-  @ApiOperation({ summary: 'Add item to cart' })
-  @ApiResponse({ status: 201, description: 'Item added to cart successfully' })
-  addToCart(@Body() createOrderItemDto: any, @CurrentUser() user: any): Promise<any> {
-    return this.ordersService.addToCart(user.id, createOrderItemDto);
-  }
+  // @Post('cart/items')
+  // @ApiOperation({ summary: 'Add item to cart' })
+  // @ApiResponse({ status: 201, description: 'Item added to cart successfully' })
+  // addToCart(@Body() createOrderItemDto: any, @CurrentUser() user: any): Promise<any> {
+  //   return this.ordersService.addToCart(user.id, createOrderItemDto);
+  // }
 
-  @Patch('cart/items/:wineId')
-  @ApiOperation({ summary: 'Update cart item quantity' })
-  @ApiResponse({ status: 200, description: 'Cart item updated successfully' })
-  updateCartItem(
-    @Param('wineId') wineId: string,
-    @Body() body: { quantity: number },
-    @CurrentUser() user: any,
-  ): Promise<any> {
-    return this.ordersService.updateCartItem(user.id, wineId, body.quantity);
-  }
+  // @Patch('cart/items/:wineId')
+  // @ApiOperation({ summary: 'Update cart item quantity' })
+  // @ApiResponse({ status: 200, description: 'Cart item updated successfully' })
+  // updateCartItem(
+  //   @Param('wineId') wineId: string,
+  //   @Body() body: { quantity: number },
+  //   @CurrentUser() user: any,
+  // ): Promise<any> {
+  //   return this.ordersService.updateCartItem(user.id, wineId, body.quantity);
+  // }
 
-  @Delete('cart/items/:wineId')
-  @ApiOperation({ summary: 'Remove item from cart' })
-  @ApiResponse({ status: 200, description: 'Item removed from cart successfully' })
-  removeFromCart(@Param('wineId') wineId: string, @CurrentUser() user: any): Promise<any> {
-    return this.ordersService.removeFromCart(user.id, wineId);
-  }
+  // @Delete('cart/items/:wineId')
+  // @ApiOperation({ summary: 'Remove item from cart' })
+  // @ApiResponse({ status: 200, description: 'Item removed from cart successfully' })
+  // removeFromCart(@Param('wineId') wineId: string, @CurrentUser() user: any): Promise<any> {
+  //   return this.ordersService.removeFromCart(user.id, wineId);
+  // }
 
-  @Delete('cart')
-  @ApiOperation({ summary: 'Clear entire cart' })
-  @ApiResponse({ status: 200, description: 'Cart cleared successfully' })
-  clearCart(@CurrentUser() user: any): Promise<any> {
-    return this.ordersService.clearCart(user.id);
-  }
+  // @Delete('cart')
+  // @ApiOperation({ summary: 'Clear entire cart' })
+  // @ApiResponse({ status: 200, description: 'Cart cleared successfully' })
+  // clearCart(@CurrentUser() user: any): Promise<any> {
+  //   return this.ordersService.clearCart(user.id);
+  // }
 
-  @Post('cart/checkout')
-  @ApiOperation({ summary: 'Create order from cart' })
-  @ApiResponse({ status: 201, description: 'Order created from cart successfully' })
-  checkoutCart(@Body() checkoutData: any, @CurrentUser() user: any): Promise<any> {
-    return this.ordersService.checkoutCart(user.id, checkoutData);
-  }
+  // @Post('cart/checkout')
+  // @ApiOperation({ summary: 'Create order from cart' })
+  // @ApiResponse({ status: 201, description: 'Order created from cart successfully' })
+  // checkoutCart(@Body() checkoutData: any, @CurrentUser() user: any): Promise<any> {
+  //   return this.ordersService.checkoutCart(user.id, checkoutData);
+  // }
 
   @Get('user/:userId')
   @UseGuards(RolesGuard)

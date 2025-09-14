@@ -57,7 +57,7 @@ model Wine {
   price       Decimal  @db.Decimal(10, 2)
   
   // Wine specific details
-  vintage     Int?
+  annata      Int?
   region      String?
   country     String?
   producer    String?
