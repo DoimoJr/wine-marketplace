@@ -78,8 +78,10 @@ export default function WinePage() {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [quantity, setQuantity] = useState(1)
   const [isFavorite, setIsFavorite] = useState(false)
+  const [isSellerFavorite, setIsSellerFavorite] = useState(false)
   const [addingToCart, setAddingToCart] = useState(false)
   const [wishlistLoading, setWishlistLoading] = useState(false)
+  const [sellerFavoriteLoading, setSellerFavoriteLoading] = useState(false)
   const [cartQuantity, setCartQuantity] = useState(0)
 
   useEffect(() => {
@@ -100,6 +102,14 @@ export default function WinePage() {
       setIsFavorite(false)
     }
   }, [params.id, session?.user])
+
+  useEffect(() => {
+    if (wine?.seller?.id && session?.user) {
+      checkSellerFavoriteStatus(wine.seller.id)
+    } else {
+      setIsSellerFavorite(false)
+    }
+  }, [wine?.seller?.id, session?.user])
 
   // Reset quantità se supera quelle disponibili (ad es. dopo acquisto di qualcun altro)
   useEffect(() => {
@@ -338,6 +348,97 @@ export default function WinePage() {
     } finally {
       setWishlistLoading(false)
       console.log('🔄 Wishlist loading state reset')
+    }
+  }
+
+  const checkSellerFavoriteStatus = async (sellerId: string, retryCount = 0) => {
+    if (!session?.user) return
+
+    try {
+      const response = await fetch(`/api/favorite-sellers/check/${sellerId}`, {
+        signal: AbortSignal.timeout(5000)
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setIsSellerFavorite(data.isFavorite)
+        console.log('✅ Seller favorite status loaded:', data.isFavorite)
+      } else if (response.status === 401 && retryCount < 2) {
+        console.log(`🔄 Retrying seller favorite check (attempt ${retryCount + 1})`)
+        setTimeout(() => {
+          checkSellerFavoriteStatus(sellerId, retryCount + 1)
+        }, 1000)
+      } else {
+        console.warn('⚠️ Failed to check seller favorite status:', response.status)
+        setIsSellerFavorite(false)
+      }
+    } catch (error) {
+      console.error('❌ Error checking seller favorite status:', error)
+      setIsSellerFavorite(false)
+    }
+  }
+
+  const handleSellerFavoriteToggle = async () => {
+    if (!session?.user) {
+      router.push('/login')
+      return
+    }
+
+    if (!wine?.seller) {
+      return
+    }
+
+    if (sellerFavoriteLoading) {
+      return
+    }
+
+    try {
+      setSellerFavoriteLoading(true)
+
+      if (isSellerFavorite) {
+        const response = await fetch(`/api/favorite-sellers/${wine.seller.id}`, {
+          method: 'DELETE',
+          signal: AbortSignal.timeout(5000)
+        })
+
+        if (response.ok) {
+          setIsSellerFavorite(false)
+          console.log('✅ Successfully removed seller from favorites')
+        } else {
+          console.error('❌ Failed to remove seller from favorites:', response.status)
+          if (response.status === 401) {
+            router.push('/login')
+          } else {
+            alert('Errore durante la rimozione dai preferiti. Riprova.')
+          }
+        }
+      } else {
+        const response = await fetch('/api/favorite-sellers', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ sellerId: wine.seller.id }),
+          signal: AbortSignal.timeout(5000)
+        })
+
+        if (response.ok) {
+          setIsSellerFavorite(true)
+          console.log('✅ Successfully added seller to favorites')
+        } else {
+          console.error('❌ Failed to add seller to favorites:', response.status)
+          if (response.status === 401) {
+            router.push('/login')
+          } else {
+            alert('Errore durante l\'aggiunta ai preferiti. Riprova.')
+          }
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error toggling seller favorite:', error)
+      alert('Errore di connessione. Verifica la tua connessione e riprova.')
+    } finally {
+      setSellerFavoriteLoading(false)
     }
   }
 
@@ -604,7 +705,7 @@ export default function WinePage() {
               </div>
 
               {/* Rating */}
-              {wine.averageRating && wine.totalReviews && (
+              {wine.averageRating != null && wine.totalReviews != null && wine.totalReviews > 0 && (
                 <div className="flex items-center space-x-2 mb-4">
                   <div className="flex">
                     {renderStars(Math.round(wine.averageRating))}
@@ -738,31 +839,38 @@ export default function WinePage() {
                 </div>
               </div>
 
-              <button
-                onClick={handleAddToCart}
-                disabled={addingToCart || wine.quantity - cartQuantity <= 0}
-                className={`w-full py-3 px-6 rounded-lg font-medium transition-all duration-200 flex items-center justify-center space-x-2 ${
-                  wine.quantity - cartQuantity <= 0
-                    ? 'bg-red-100 text-red-600 cursor-not-allowed border-2 border-red-200'
-                    : addingToCart
-                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed opacity-75'
-                    : 'bg-wine-600 text-white hover:bg-wine-700 cursor-pointer'
-                }`}
-              >
-                {wine.quantity - cartQuantity <= 0 ? (
-                  <ExclamationTriangleIcon className="h-5 w-5" />
-                ) : (
-                  <ShoppingCartIcon className="h-5 w-5" />
-                )}
-                <span>
-                  {addingToCart
-                    ? 'Aggiungendo...'
-                    : wine.quantity - cartQuantity <= 0
-                    ? cartQuantity >= wine.quantity ? 'Già tutto nel carrello' : 'Esaurito'
-                    : 'Aggiungi al carrello'
-                  }
-                </span>
-              </button>
+              {session?.user?.id === wine.seller.id ? (
+                <div className="w-full py-3 px-6 rounded-lg bg-gray-100 text-gray-600 text-center font-medium">
+                  <UserIcon className="h-5 w-5 inline mr-2" />
+                  Questo è il tuo vino
+                </div>
+              ) : (
+                <button
+                  onClick={handleAddToCart}
+                  disabled={addingToCart || wine.quantity - cartQuantity <= 0}
+                  className={`w-full py-3 px-6 rounded-lg font-medium transition-all duration-200 flex items-center justify-center space-x-2 ${
+                    wine.quantity - cartQuantity <= 0
+                      ? 'bg-red-100 text-red-600 cursor-not-allowed border-2 border-red-200'
+                      : addingToCart
+                      ? 'bg-gray-400 text-gray-200 cursor-not-allowed opacity-75'
+                      : 'bg-wine-600 text-white hover:bg-wine-700 cursor-pointer'
+                  }`}
+                >
+                  {wine.quantity - cartQuantity <= 0 ? (
+                    <ExclamationTriangleIcon className="h-5 w-5" />
+                  ) : (
+                    <ShoppingCartIcon className="h-5 w-5" />
+                  )}
+                  <span>
+                    {addingToCart
+                      ? 'Aggiungendo...'
+                      : wine.quantity - cartQuantity <= 0
+                      ? cartQuantity >= wine.quantity ? 'Già tutto nel carrello' : 'Esaurito'
+                      : 'Aggiungi al carrello'
+                    }
+                  </span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -828,14 +936,44 @@ export default function WinePage() {
             </div>
 
             <div className="space-y-2">
-              <button className="w-full bg-gray-100 text-gray-700 py-2 px-4 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">
-                Contatta il venditore
-              </button>
+              {session?.user?.id !== wine.seller.id && (
+                <button className="w-full bg-gray-100 text-gray-700 py-2 px-4 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">
+                  Contatta il venditore
+                </button>
+              )}
+              {session?.user?.id !== wine.seller.id && (
+                <button
+                  onClick={handleSellerFavoriteToggle}
+                  disabled={sellerFavoriteLoading}
+                  className={`w-full py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center space-x-2 ${
+                    sellerFavoriteLoading
+                      ? 'opacity-50 cursor-wait bg-gray-100 text-gray-700'
+                      : isSellerFavorite
+                      ? 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100'
+                      : 'bg-wine-50 text-wine-700 border border-wine-200 hover:bg-wine-100'
+                  } ${!session ? 'hover:bg-wine-100 hover:border-wine-300' : ''}`}
+                  title={!session ? 'Accedi per seguire il venditore' : isSellerFavorite ? 'Smetti di seguire' : 'Segui venditore'}
+                >
+                  {sellerFavoriteLoading ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                  ) : (
+                    <UserIcon className={`h-4 w-4 ${isSellerFavorite ? 'text-red-600' : 'text-wine-600'}`} />
+                  )}
+                  <span>
+                    {sellerFavoriteLoading
+                      ? 'Caricamento...'
+                      : isSellerFavorite
+                      ? 'Smetti di seguire'
+                      : 'Segui venditore'
+                    }
+                  </span>
+                </button>
+              )}
               <Link
-                href={`/seller/${wine.seller.id}`}
+                href={session?.user?.id === wine.seller.id ? '/profile' : `/sellers/${wine.seller.id}`}
                 className="block w-full text-center bg-white border border-gray-300 text-gray-700 py-2 px-4 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
               >
-                Vedi altri vini
+                {session?.user?.id === wine.seller.id ? 'Il mio profilo' : 'Vedi altri vini'}
               </Link>
             </div>
           </div>

@@ -18,6 +18,11 @@ interface Wine {
   wineType: string
   condition: string
   createdAt: string
+  averageRating?: number
+  totalReviews?: number
+  _count?: {
+    reviews: number
+  }
 }
 
 export default function BrowsePage() {

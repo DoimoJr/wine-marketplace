@@ -54,57 +54,24 @@ export class OrdersController {
     return this.ordersService.findMany(filters, user.id, user.role);
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Get order by ID' })
-  @ApiResponse({ status: 200, description: 'Order retrieved successfully' })
-  @ApiResponse({ status: 404, description: 'Order not found' })
-  @ApiResponse({ status: 403, description: 'Forbidden - not your order' })
-  findOne(@Param('id') id: string, @CurrentUser() user: any): Promise<any> {
-    return this.ordersService.findOne(id, user.id, user.role);
-  }
-
-  @Patch(':id/status')
-  @ApiOperation({ summary: 'Update order status (seller or admin only)' })
-  @ApiResponse({ status: 200, description: 'Order status updated successfully' })
-  @ApiResponse({ status: 403, description: 'Forbidden - only seller or admin can update' })
-  @ApiResponse({ status: 404, description: 'Order not found' })
-  updateStatus(
-    @Param('id') id: string,
-    @Body() updateOrderStatusDto: UpdateOrderStatusDto,
-    @CurrentUser() user: any,
-  ): Promise<any> {
-    return this.ordersService.updateStatus(id, updateOrderStatusDto, user.id, user.role);
-  }
-
-  @Post(':id/payment')
-  @ApiOperation({ summary: 'Process payment for order' })
-  @ApiResponse({ status: 200, description: 'Payment processed successfully' })
-  @ApiResponse({ status: 400, description: 'Payment processing failed' })
-  @ApiResponse({ status: 403, description: 'Forbidden - not your order' })
-  processPayment(
-    @Param('id') id: string,
-    @Body() processPaymentDto: ProcessPaymentDto,
-    @CurrentUser() user: any,
-  ): Promise<any> {
-    return this.ordersService.processPayment(id, processPaymentDto, user.id);
-  }
-
-  @Delete(':id')
-  @ApiOperation({ summary: 'Cancel order' })
-  @ApiResponse({ status: 200, description: 'Order cancelled successfully' })
-  @ApiResponse({ status: 400, description: 'Cannot cancel shipped/delivered orders' })
-  @ApiResponse({ status: 403, description: 'Forbidden - not your order' })
-  @ApiResponse({ status: 404, description: 'Order not found' })
-  cancel(@Param('id') id: string, @CurrentUser() user: any): Promise<any> {
-    return this.ordersService.cancelOrder(id, user.id, user.role);
-  }
-
-  // Shopping Cart endpoints
+  // Shopping Cart endpoints - MUST be before :id route
   @Get('cart')
   @ApiOperation({ summary: 'Get current user cart' })
   @ApiResponse({ status: 200, description: 'Cart retrieved successfully' })
-  getCart(@CurrentUser() user: any): Promise<any> {
-    return this.ordersService.getCart(user.id);
+  async getCart(@CurrentUser() user: any): Promise<any> {
+    try {
+      console.log('🎯 Controller getCart called for user:', user.id);
+      console.log('🎯 About to call ordersService.getCart');
+
+      const result = await this.ordersService.getCart(user.id);
+
+      console.log('🎯 Controller received result from service:', result);
+      return result;
+    } catch (error) {
+      console.error('🎯 Controller getCart ERROR:', error);
+      console.error('🎯 Error stack:', error.stack);
+      throw error;
+    }
   }
 
   @Post('cart/items')
@@ -150,6 +117,51 @@ export class OrdersController {
   @ApiResponse({ status: 400, description: 'Cart is empty or items unavailable' })
   checkoutCart(@Body() checkoutCartDto: CheckoutCartDto, @CurrentUser() user: any): Promise<any> {
     return this.ordersService.checkoutCart(user.id, checkoutCartDto);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get order by ID' })
+  @ApiResponse({ status: 200, description: 'Order retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'Order not found' })
+  @ApiResponse({ status: 403, description: 'Forbidden - not your order' })
+  findOne(@Param('id') id: string, @CurrentUser() user: any): Promise<any> {
+    return this.ordersService.findOne(id, user.id, user.role);
+  }
+
+  @Patch(':id/status')
+  @ApiOperation({ summary: 'Update order status (seller or admin only)' })
+  @ApiResponse({ status: 200, description: 'Order status updated successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden - only seller or admin can update' })
+  @ApiResponse({ status: 404, description: 'Order not found' })
+  updateStatus(
+    @Param('id') id: string,
+    @Body() updateOrderStatusDto: UpdateOrderStatusDto,
+    @CurrentUser() user: any,
+  ): Promise<any> {
+    return this.ordersService.updateStatus(id, updateOrderStatusDto, user.id, user.role);
+  }
+
+  @Post(':id/payment')
+  @ApiOperation({ summary: 'Process payment for order' })
+  @ApiResponse({ status: 200, description: 'Payment processed successfully' })
+  @ApiResponse({ status: 400, description: 'Payment processing failed' })
+  @ApiResponse({ status: 403, description: 'Forbidden - not your order' })
+  processPayment(
+    @Param('id') id: string,
+    @Body() processPaymentDto: ProcessPaymentDto,
+    @CurrentUser() user: any,
+  ): Promise<any> {
+    return this.ordersService.processPayment(id, processPaymentDto, user.id);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Cancel order' })
+  @ApiResponse({ status: 200, description: 'Order cancelled successfully' })
+  @ApiResponse({ status: 400, description: 'Cannot cancel shipped/delivered orders' })
+  @ApiResponse({ status: 403, description: 'Forbidden - not your order' })
+  @ApiResponse({ status: 404, description: 'Order not found' })
+  cancel(@Param('id') id: string, @CurrentUser() user: any): Promise<any> {
+    return this.ordersService.cancelOrder(id, user.id, user.role);
   }
 
   @Get('user/:userId')

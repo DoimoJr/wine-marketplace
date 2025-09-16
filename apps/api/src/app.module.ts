@@ -8,6 +8,7 @@ import { MessagesModule } from './messages/messages.module';
 import { AdminModule } from './admin/admin.module';
 import { UploadModule } from './upload/upload.module';
 import { WishlistModule } from './wishlist/wishlist.module';
+import { FavoriteSellersModule } from './favorite-sellers/favorite-sellers.module';
 import { CommonModule } from './common/common.module';
 
 @Module({
@@ -25,6 +26,7 @@ import { CommonModule } from './common/common.module';
     AdminModule,
     UploadModule,
     WishlistModule,
+    FavoriteSellersModule,
   ],
 })
 export class AppModule {}

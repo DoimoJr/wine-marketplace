@@ -137,11 +137,27 @@ export class WinesService {
       this.prisma.wine.count({ where }),
     ]);
 
+    // Calculate average ratings for all wines
+    const winesWithRatings = await Promise.all(
+      wines.map(async (wine) => {
+        const avgRating = await this.prisma.review.aggregate({
+          where: { wineId: wine.id },
+          _avg: { rating: true },
+        });
+
+        return {
+          ...wine,
+          averageRating: avgRating._avg.rating || 0,
+          totalReviews: wine._count.reviews,
+        };
+      })
+    );
+
     // Get filter options for the frontend
     const filterOptions = await this.getFilterOptions();
 
     return {
-      wines,
+      wines: winesWithRatings,
       total,
       page,
       limit,

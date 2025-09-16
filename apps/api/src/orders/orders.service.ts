@@ -473,7 +473,10 @@ export class OrdersService {
 
   // Cart methods
   async getCart(userId: string): Promise<any> {
-    // Find all pending cart orders for the user (multi-seller approach)
+    console.log('🛒 ENTRY: getCart method started for userId:', userId);
+    console.log('🛒 DEBUG: This is the NEW version of getCart method');
+
+    // Find all cart orders for the user (multi-seller support)
     const cartOrders = await this.prisma.order.findMany({
       where: {
         buyerId: userId,
@@ -484,74 +487,83 @@ export class OrdersService {
           include: {
             wine: {
               include: {
-                seller: {
-                  select: {
-                    id: true,
-                    username: true,
-                    firstName: true,
-                    lastName: true,
-                    avatar: true,
-                    verified: true,
-                  },
-                },
+                seller: true,
               },
             },
           },
         },
-        seller: {
-          select: {
-            id: true,
-            username: true,
-            firstName: true,
-            lastName: true,
-            avatar: true,
-            verified: true,
-          },
-        },
+        seller: true,
       },
     });
 
+    console.log('🛒 Found cart orders:', cartOrders.length);
+
     if (cartOrders.length === 0) {
-      // Return empty cart structure
-      return {
+      console.log('🛒 No cart orders found - returning empty cart');
+      const emptyResult = {
         sellers: [],
         totalAmount: 0,
         totalItems: 0,
         shippingCost: 0,
         grandTotal: 0,
       };
+      return emptyResult;
     }
 
-    // Group orders by seller and calculate totals
-    const sellers = cartOrders.map(order => {
-      const sellerTotal = order.items.reduce((sum, item) => sum + (item.price.toNumber() * item.quantity), 0);
-      const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
-      const shippingCost = this.calculateShippingForSeller(sellerTotal, itemCount);
+    // Group by seller
+    const sellerCarts = cartOrders.map(cartOrder => {
+      const items = cartOrder.items.map(item => ({
+        id: item.id,
+        wineId: item.wineId,
+        quantity: item.quantity,
+        price: item.price.toNumber(),
+        subtotal: item.price.toNumber() * item.quantity,
+        wine: {
+          id: item.wine.id,
+          title: item.wine.title,
+          annata: item.wine.annata,
+          region: item.wine.region,
+          country: item.wine.country,
+          images: item.wine.images,
+          wineType: item.wine.wineType,
+        },
+      }));
+
+      const subtotal = items.reduce((sum, item) => sum + item.subtotal, 0);
+      const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+      const shippingCost = this.calculateShippingForSeller(subtotal, itemCount);
 
       return {
-        seller: order.seller,
-        orderId: order.id,
-        items: order.items,
-        subtotal: sellerTotal,
-        itemCount,
+        seller: {
+          id: cartOrder.seller.id,
+          username: cartOrder.seller.username,
+          firstName: cartOrder.seller.firstName,
+          lastName: cartOrder.seller.lastName,
+        },
+        orderId: cartOrder.id,
+        items,
+        subtotal,
         shippingCost,
-        total: sellerTotal + shippingCost,
+        total: subtotal + shippingCost,
       };
     });
 
-    // Calculate overall totals
-    const totalAmount = sellers.reduce((sum, seller) => sum + seller.subtotal, 0);
-    const totalItems = sellers.reduce((sum, seller) => sum + seller.itemCount, 0);
-    const shippingCost = sellers.reduce((sum, seller) => sum + seller.shippingCost, 0);
-    const grandTotal = totalAmount + shippingCost;
+    // Calculate totals
+    const totalItems = sellerCarts.reduce((sum, cart) => sum + cart.items.reduce((itemSum, item) => itemSum + item.quantity, 0), 0);
+    const totalAmount = sellerCarts.reduce((sum, cart) => sum + cart.subtotal, 0);
+    const totalShipping = sellerCarts.reduce((sum, cart) => sum + cart.shippingCost, 0);
+    const grandTotal = totalAmount + totalShipping;
 
-    return {
-      sellers,
+    const result = {
+      sellers: sellerCarts,
       totalAmount,
       totalItems,
-      shippingCost,
+      shippingCost: totalShipping,
       grandTotal,
     };
+
+    console.log('🛒 EXIT: getCart method returning result with', sellerCarts.length, 'sellers and', totalItems, 'total items');
+    return result;
   }
 
   private calculateShippingForSeller(subtotal: number, itemCount: number): number {
@@ -562,6 +574,8 @@ export class OrdersService {
   }
 
   async addToCart(userId: string, createOrderItemDto: { wineId: string; quantity: number }): Promise<any> {
+    console.log('🛒 Backend addToCart called for userId:', userId, 'wineId:', createOrderItemDto.wineId, 'quantity:', createOrderItemDto.quantity);
+
     const { wineId, quantity } = createOrderItemDto;
 
     // Validate wine
@@ -585,6 +599,11 @@ export class OrdersService {
 
     if (wine.status !== WineStatus.ACTIVE) {
       throw new BadRequestException('Wine is not available for purchase');
+    }
+
+    // Prevent users from buying their own wines
+    if (wine.sellerId === userId) {
+      throw new BadRequestException('Cannot purchase your own wine');
     }
 
     if (wine.quantity < quantity) {

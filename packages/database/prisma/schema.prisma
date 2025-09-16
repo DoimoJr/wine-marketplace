@@ -47,6 +47,8 @@ model User {
   shippingAddresses ShippingAddress[]
   adminLogs     AdminLog[]
   wishlistItems Wishlist[]
+  favoriteSellers FavoriteSeller[]
+  favoriteBy    FavoriteSeller[] @relation("FavoriteSellers")
   
   @@map("users")
 }
@@ -314,6 +316,22 @@ model Wishlist {
   
   @@unique([userId, wineId])
   @@map("wishlists")
+}
+
+model FavoriteSeller {
+  id       String @id @default(cuid())
+
+  // Relations
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sellerId String
+  seller   User   @relation("FavoriteSellers", fields: [sellerId], references: [id], onDelete: Cascade)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+
+  @@unique([userId, sellerId])
+  @@map("favorite_sellers")
 }
 
 // Enums

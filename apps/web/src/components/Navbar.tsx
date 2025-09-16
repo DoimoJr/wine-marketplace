@@ -3,10 +3,10 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
-import { HeartIcon, ShoppingCartIcon } from '@heroicons/react/24/outline'
+import { HeartIcon, ShoppingCartIcon, UserIcon } from '@heroicons/react/24/outline'
 
 interface NavbarProps {
-  currentPage?: 'home' | 'browse' | 'sell' | 'login' | 'wishlist' | 'cart'
+  currentPage?: 'home' | 'browse' | 'sell' | 'login' | 'wishlist' | 'cart' | 'profile'
 }
 
 export default function Navbar({ currentPage = 'home' }: NavbarProps) {
@@ -70,6 +70,19 @@ export default function Navbar({ currentPage = 'home' }: NavbarProps) {
               >
                 <HeartIcon className="h-4 w-4" />
                 <span>Wishlist</span>
+              </Link>
+            )}
+            {isAuthenticated && (
+              <Link
+                href="/profile"
+                className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium ${
+                  currentPage === 'profile'
+                    ? 'text-wine-600 font-semibold'
+                    : 'text-gray-700 hover:text-wine-600'
+                }`}
+              >
+                <UserIcon className="h-4 w-4" />
+                <span>Profilo</span>
               </Link>
             )}
             {isLoading ? (
@@ -182,6 +195,20 @@ export default function Navbar({ currentPage = 'home' }: NavbarProps) {
                 >
                   <HeartIcon className="h-4 w-4" />
                   <span>Wishlist</span>
+                </Link>
+              )}
+              {isAuthenticated && (
+                <Link
+                  href="/profile"
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium ${
+                    currentPage === 'profile'
+                      ? 'text-wine-600 bg-wine-50 font-semibold'
+                      : 'text-gray-700 hover:text-wine-600 hover:bg-gray-50'
+                  }`}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <UserIcon className="h-4 w-4" />
+                  <span>Profilo</span>
                 </Link>
               )}
               {isAuthenticated ? (
