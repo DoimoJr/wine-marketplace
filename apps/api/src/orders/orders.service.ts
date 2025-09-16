@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, ForbiddenException, BadRequestException 
 import { PrismaService } from '../common/services/prisma.service';
 import { PaymentService } from './payment.service';
 import { CreateOrderDto, UpdateOrderStatusDto, ProcessPaymentDto, OrderFiltersDto } from './dto/order.dto';
-import { OrderStatus, PaymentStatus, WineStatus } from '@wine-marketplace/shared';
+import { OrderStatus, PaymentStatus, WineStatus, PaymentProvider } from '@wine-marketplace/shared';
 
 @Injectable()
 export class OrdersService {
@@ -469,5 +469,503 @@ export class OrdersService {
         },
       });
     }
+  }
+
+  // Cart methods
+  async getCart(userId: string): Promise<any> {
+    // Find all pending cart orders for the user (multi-seller approach)
+    const cartOrders = await this.prisma.order.findMany({
+      where: {
+        buyerId: userId,
+        status: OrderStatus.PENDING,
+      },
+      include: {
+        items: {
+          include: {
+            wine: {
+              include: {
+                seller: {
+                  select: {
+                    id: true,
+                    username: true,
+                    firstName: true,
+                    lastName: true,
+                    avatar: true,
+                    verified: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        seller: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true,
+            avatar: true,
+            verified: true,
+          },
+        },
+      },
+    });
+
+    if (cartOrders.length === 0) {
+      // Return empty cart structure
+      return {
+        sellers: [],
+        totalAmount: 0,
+        totalItems: 0,
+        shippingCost: 0,
+        grandTotal: 0,
+      };
+    }
+
+    // Group orders by seller and calculate totals
+    const sellers = cartOrders.map(order => {
+      const sellerTotal = order.items.reduce((sum, item) => sum + (item.price.toNumber() * item.quantity), 0);
+      const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
+      const shippingCost = this.calculateShippingForSeller(sellerTotal, itemCount);
+
+      return {
+        seller: order.seller,
+        orderId: order.id,
+        items: order.items,
+        subtotal: sellerTotal,
+        itemCount,
+        shippingCost,
+        total: sellerTotal + shippingCost,
+      };
+    });
+
+    // Calculate overall totals
+    const totalAmount = sellers.reduce((sum, seller) => sum + seller.subtotal, 0);
+    const totalItems = sellers.reduce((sum, seller) => sum + seller.itemCount, 0);
+    const shippingCost = sellers.reduce((sum, seller) => sum + seller.shippingCost, 0);
+    const grandTotal = totalAmount + shippingCost;
+
+    return {
+      sellers,
+      totalAmount,
+      totalItems,
+      shippingCost,
+      grandTotal,
+    };
+  }
+
+  private calculateShippingForSeller(subtotal: number, itemCount: number): number {
+    // Basic shipping calculation - can be made more sophisticated
+    if (subtotal >= 50) return 0; // Free shipping over €50
+    if (itemCount === 1) return 8; // €8 for single item
+    return Math.min(8 + (itemCount - 1) * 3, 15); // €8 base + €3 per additional item, max €15
+  }
+
+  async addToCart(userId: string, createOrderItemDto: { wineId: string; quantity: number }): Promise<any> {
+    const { wineId, quantity } = createOrderItemDto;
+
+    // Validate wine
+    const wine = await this.prisma.wine.findUnique({
+      where: { id: wineId },
+      include: {
+        seller: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+
+    if (!wine) {
+      throw new NotFoundException('Wine not found');
+    }
+
+    if (wine.status !== WineStatus.ACTIVE) {
+      throw new BadRequestException('Wine is not available for purchase');
+    }
+
+    if (wine.quantity < quantity) {
+      throw new BadRequestException(`Insufficient quantity. Available: ${wine.quantity}, Requested: ${quantity}`);
+    }
+
+    // Get or create cart for this specific seller (multi-seller approach)
+    let cart = await this.prisma.order.findFirst({
+      where: {
+        buyerId: userId,
+        sellerId: wine.sellerId,
+        status: OrderStatus.PENDING,
+      },
+      include: {
+        items: true,
+      },
+    });
+
+    if (!cart) {
+      const orderNumber = `CART-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      cart = await this.prisma.order.create({
+        data: {
+          orderNumber,
+          buyerId: userId,
+          sellerId: wine.sellerId,
+          status: OrderStatus.PENDING,
+          totalAmount: 0,
+          paymentStatus: PaymentStatus.PENDING,
+        },
+        include: {
+          items: true,
+        },
+      });
+    }
+
+    // Check if item already exists in cart
+    const existingItem = cart.items.find(item => item.wineId === wineId);
+
+    if (existingItem) {
+      // Update quantity
+      const newQuantity = existingItem.quantity + quantity;
+      
+      if (wine.quantity < newQuantity) {
+        throw new BadRequestException(`Insufficient quantity. Available: ${wine.quantity}, Total requested: ${newQuantity}`);
+      }
+
+      await this.prisma.orderItem.update({
+        where: { id: existingItem.id },
+        data: { quantity: newQuantity },
+      });
+    } else {
+      // Add new item
+      await this.prisma.orderItem.create({
+        data: {
+          orderId: cart.id,
+          wineId,
+          quantity,
+          price: wine.price,
+        },
+      });
+    }
+
+    // Update cart total
+    const updatedCart = await this.prisma.order.findUnique({
+      where: { id: cart.id },
+      include: {
+        items: {
+          include: {
+            wine: {
+              include: {
+                seller: {
+                  select: {
+                    id: true,
+                    username: true,
+                    firstName: true,
+                    lastName: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const cartTotal = updatedCart.items.reduce((sum, item) => sum + (item.price.toNumber() * item.quantity), 0);
+    
+    await this.prisma.order.update({
+      where: { id: cart.id },
+      data: { totalAmount: cartTotal },
+    });
+
+    return this.getCart(userId);
+  }
+
+  async updateCartItem(userId: string, wineId: string, quantity: number): Promise<any> {
+    if (quantity < 1) {
+      throw new BadRequestException('Quantity must be at least 1');
+    }
+
+    // First get wine to find the seller
+    const wine = await this.prisma.wine.findUnique({
+      where: { id: wineId },
+      select: { 
+        id: true, 
+        sellerId: true, 
+        quantity: true, 
+        status: true 
+      },
+    });
+
+    if (!wine) {
+      throw new NotFoundException('Wine not found');
+    }
+
+    if (wine.status !== WineStatus.ACTIVE) {
+      throw new BadRequestException('Wine is not available');
+    }
+
+    // Find the seller-specific cart
+    const cart = await this.prisma.order.findFirst({
+      where: {
+        buyerId: userId,
+        sellerId: wine.sellerId,
+        status: OrderStatus.PENDING,
+      },
+      include: {
+        items: {
+          where: { wineId },
+          include: {
+            wine: true,
+          },
+        },
+      },
+    });
+
+    if (!cart || cart.items.length === 0) {
+      throw new NotFoundException('Item not found in cart');
+    }
+
+    const cartItem = cart.items[0];
+
+    if (wine.quantity < quantity) {
+      throw new BadRequestException(`Insufficient quantity. Available: ${wine.quantity}, Requested: ${quantity}`);
+    }
+
+    await this.prisma.orderItem.update({
+      where: { id: cartItem.id },
+      data: { quantity },
+    });
+
+    // Update cart total
+    const updatedCart = await this.prisma.order.findUnique({
+      where: { id: cart.id },
+      include: { items: true },
+    });
+
+    const cartTotal = updatedCart.items.reduce((sum, item) => sum + (item.price.toNumber() * item.quantity), 0);
+    
+    await this.prisma.order.update({
+      where: { id: cart.id },
+      data: { totalAmount: cartTotal },
+    });
+
+    return this.getCart(userId);
+  }
+
+  async removeFromCart(userId: string, wineId: string): Promise<any> {
+    // First get wine to find the seller
+    const wine = await this.prisma.wine.findUnique({
+      where: { id: wineId },
+      select: { id: true, sellerId: true },
+    });
+
+    if (!wine) {
+      throw new NotFoundException('Wine not found');
+    }
+
+    // Find the seller-specific cart
+    const cart = await this.prisma.order.findFirst({
+      where: {
+        buyerId: userId,
+        sellerId: wine.sellerId,
+        status: OrderStatus.PENDING,
+      },
+      include: {
+        items: {
+          where: { wineId },
+        },
+      },
+    });
+
+    if (!cart || cart.items.length === 0) {
+      throw new NotFoundException('Item not found in cart');
+    }
+
+    const cartItem = cart.items[0];
+    
+    await this.prisma.orderItem.delete({
+      where: { id: cartItem.id },
+    });
+
+    // Update cart total
+    const updatedCart = await this.prisma.order.findUnique({
+      where: { id: cart.id },
+      include: { items: true },
+    });
+
+    const cartTotal = updatedCart.items.reduce((sum, item) => sum + (item.price.toNumber() * item.quantity), 0);
+    
+    await this.prisma.order.update({
+      where: { id: cart.id },
+      data: { totalAmount: cartTotal },
+    });
+
+    // If cart is empty, delete it
+    if (updatedCart.items.length === 0) {
+      await this.prisma.order.delete({
+        where: { id: cart.id },
+      });
+    }
+
+    return this.getCart(userId);
+  }
+
+  async clearCart(userId: string): Promise<any> {
+    // Find all pending carts for the user (multi-seller)
+    const carts = await this.prisma.order.findMany({
+      where: {
+        buyerId: userId,
+        status: OrderStatus.PENDING,
+      },
+      include: { items: true },
+    });
+
+    if (carts.length === 0) {
+      throw new NotFoundException('Cart not found');
+    }
+
+    // Delete all cart items from all seller carts
+    for (const cart of carts) {
+      await this.prisma.orderItem.deleteMany({
+        where: { orderId: cart.id },
+      });
+    }
+
+    // Delete all empty cart orders
+    await this.prisma.order.deleteMany({
+      where: {
+        buyerId: userId,
+        status: OrderStatus.PENDING,
+      },
+    });
+
+    return this.getCart(userId);
+  }
+
+  async checkoutCart(userId: string, checkoutData: { shippingAddressId?: string; shippingAddress?: any; paymentProvider: string }): Promise<any> {
+    // Get all pending carts for the user (multi-seller)
+    const carts = await this.prisma.order.findMany({
+      where: {
+        buyerId: userId,
+        status: OrderStatus.PENDING,
+      },
+      include: {
+        items: {
+          include: {
+            wine: true,
+          },
+        },
+        seller: true,
+      },
+    });
+
+    if (carts.length === 0 || carts.every(cart => cart.items.length === 0)) {
+      throw new BadRequestException('Cart is empty');
+    }
+
+    // Validate all items are still available across all seller carts
+    for (const cart of carts) {
+      for (const item of cart.items) {
+        const wine = await this.prisma.wine.findUnique({
+          where: { id: item.wineId },
+        });
+
+        if (!wine || wine.status !== WineStatus.ACTIVE) {
+          throw new BadRequestException(`Wine "${item.wine.title}" is no longer available`);
+        }
+
+        if (wine.quantity < item.quantity) {
+          throw new BadRequestException(
+            `Insufficient quantity for wine "${wine.title}". Available: ${wine.quantity}, In cart: ${item.quantity}`
+          );
+        }
+      }
+    }
+
+    // Handle shipping address
+    const { shippingAddressId, shippingAddress, paymentProvider } = checkoutData;
+    let addressId = shippingAddressId;
+    
+    if (!addressId && shippingAddress) {
+      const createdAddress = await this.prisma.shippingAddress.create({
+        data: {
+          ...shippingAddress,
+          userId,
+        },
+      });
+      addressId = createdAddress.id;
+    }
+
+    if (!addressId) {
+      throw new BadRequestException('Shipping address is required');
+    }
+
+    // Generate batch ID to link all orders from this checkout
+    const batchId = `BATCH-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+    
+    // Convert each seller cart to a separate order
+    const orders = [];
+    
+    for (const cart of carts) {
+      if (cart.items.length === 0) continue;
+
+      // Calculate shipping cost for this seller
+      const cartSubtotal = cart.items.reduce((sum, item) => sum + (item.price.toNumber() * item.quantity), 0);
+      const itemCount = cart.items.reduce((sum, item) => sum + item.quantity, 0);
+      const shippingCost = this.calculateShippingForSeller(cartSubtotal, itemCount);
+      const totalAmount = cartSubtotal + shippingCost;
+
+      // Generate unique order number for each seller
+      const orderNumber = `WM-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      
+      const order = await this.prisma.order.update({
+        where: { id: cart.id },
+        data: {
+          orderNumber,
+          batchId,
+          status: OrderStatus.CONFIRMED,
+          shippingAddressId: addressId,
+          paymentProvider: paymentProvider as PaymentProvider,
+          shippingCost,
+          totalAmount,
+        },
+        include: {
+          items: {
+            include: {
+              wine: true,
+            },
+          },
+          shippingAddress: true,
+          seller: {
+            select: {
+              id: true,
+              username: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+          buyer: {
+            select: {
+              id: true,
+              username: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+        },
+      });
+
+      orders.push(order);
+    }
+
+    // Return summary of all created orders
+    return {
+      batchId,
+      totalOrders: orders.length,
+      orders,
+      grandTotal: orders.reduce((sum, order) => sum + order.totalAmount.toNumber(), 0),
+    };
   }
 }

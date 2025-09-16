@@ -1,9 +1,13 @@
 import { PrismaClient, WineType, WineCondition, UserRole } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 Seeding database...');
+
+  // Hash password for demo users
+  const defaultPassword = await bcrypt.hash('password123', 10);
 
   // Clean existing data
   await prisma.adminLog.deleteMany();
@@ -25,6 +29,7 @@ async function main() {
       username: 'admin',
       firstName: 'Admin',
       lastName: 'User',
+      hashedPassword: defaultPassword,
       role: UserRole.ADMIN,
       verified: true,
       profileComplete: true,
@@ -39,6 +44,7 @@ async function main() {
       username: 'marcorossi',
       firstName: 'Marco',
       lastName: 'Rossi',
+      hashedPassword: defaultPassword,
       verified: true,
       profileComplete: true,
       bio: 'Wine collector from Tuscany with 20+ years of experience',
@@ -52,6 +58,7 @@ async function main() {
       username: 'giuliab',
       firstName: 'Giulia',
       lastName: 'Bianchi',
+      hashedPassword: defaultPassword,
       verified: true,
       profileComplete: true,
       bio: 'Sommelier and wine enthusiast',
@@ -65,6 +72,7 @@ async function main() {
       username: 'lucaverdi',
       firstName: 'Luca',
       lastName: 'Verdi',
+      hashedPassword: defaultPassword,
       verified: true,
       profileComplete: true,
       bio: 'Wine lover and collector',
@@ -172,7 +180,7 @@ async function main() {
 
   console.log('✅ Seeding completed successfully!');
   console.log(`Created ${wines.length} wines`);
-  console.log('Users created:');
+  console.log('Users created with password "password123":');
   console.log(`- Admin: ${admin.email}`);
   console.log(`- Seller 1: ${seller1.email}`);
   console.log(`- Seller 2: ${seller2.email}`);

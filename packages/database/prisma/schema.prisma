@@ -46,6 +46,7 @@ model User {
   refundRequests RefundRequest[]
   shippingAddresses ShippingAddress[]
   adminLogs     AdminLog[]
+  wishlistItems Wishlist[]
   
   @@map("users")
 }
@@ -86,6 +87,7 @@ model Wine {
   // Relations
   orders      OrderItem[]
   reviews     Review[]
+  wishlistItems Wishlist[]
   
   @@map("wines")
 }
@@ -104,6 +106,9 @@ model Order {
   status      OrderStatus @default(PENDING)
   totalAmount Decimal     @db.Decimal(10, 2)
   shippingCost Decimal?   @db.Decimal(10, 2)
+  
+  // Batch grouping for multi-seller checkouts
+  batchId     String?
   
   // Payment
   paymentId   String?
@@ -293,6 +298,22 @@ model AdminLog {
   createdAt DateTime @default(now())
   
   @@map("admin_logs")
+}
+
+model Wishlist {
+  id       String @id @default(cuid())
+  
+  // Relations
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wineId   String
+  wine     Wine   @relation(fields: [wineId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  
+  @@unique([userId, wineId])
+  @@map("wishlists")
 }
 
 // Enums

@@ -3,9 +3,10 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
+import { HeartIcon, ShoppingCartIcon } from '@heroicons/react/24/outline'
 
 interface NavbarProps {
-  currentPage?: 'home' | 'browse' | 'sell' | 'login'
+  currentPage?: 'home' | 'browse' | 'sell' | 'login' | 'wishlist' | 'cart'
 }
 
 export default function Navbar({ currentPage = 'home' }: NavbarProps) {
@@ -45,6 +46,32 @@ export default function Navbar({ currentPage = 'home' }: NavbarProps) {
             >
               Sell Wine
             </Link>
+            {isAuthenticated && (
+              <Link 
+                href="/cart" 
+                className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium ${
+                  currentPage === 'cart' 
+                    ? 'text-wine-600 font-semibold' 
+                    : 'text-gray-700 hover:text-wine-600'
+                }`}
+              >
+                <ShoppingCartIcon className="h-4 w-4" />
+                <span>Carrello</span>
+              </Link>
+            )}
+            {isAuthenticated && (
+              <Link 
+                href="/wishlist" 
+                className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium ${
+                  currentPage === 'wishlist' 
+                    ? 'text-wine-600 font-semibold' 
+                    : 'text-gray-700 hover:text-wine-600'
+                }`}
+              >
+                <HeartIcon className="h-4 w-4" />
+                <span>Wishlist</span>
+              </Link>
+            )}
             {isLoading ? (
               <div className="px-4 py-2">
                 <div className="animate-pulse bg-gray-300 h-4 w-16 rounded"></div>
@@ -129,6 +156,34 @@ export default function Navbar({ currentPage = 'home' }: NavbarProps) {
               >
                 Sell Wine
               </Link>
+              {isAuthenticated && (
+                <Link 
+                  href="/cart" 
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium ${
+                    currentPage === 'cart' 
+                      ? 'text-wine-600 bg-wine-50 font-semibold' 
+                      : 'text-gray-700 hover:text-wine-600 hover:bg-gray-50'
+                  }`}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <ShoppingCartIcon className="h-4 w-4" />
+                  <span>Carrello</span>
+                </Link>
+              )}
+              {isAuthenticated && (
+                <Link 
+                  href="/wishlist" 
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium ${
+                    currentPage === 'wishlist' 
+                      ? 'text-wine-600 bg-wine-50 font-semibold' 
+                      : 'text-gray-700 hover:text-wine-600 hover:bg-gray-50'
+                  }`}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <HeartIcon className="h-4 w-4" />
+                  <span>Wishlist</span>
+                </Link>
+              )}
               {isAuthenticated ? (
                 <div className="flex flex-col space-y-2 mx-3">
                   <span className="text-sm text-gray-700 py-2">

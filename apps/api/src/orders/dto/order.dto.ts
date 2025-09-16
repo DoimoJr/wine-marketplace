@@ -23,7 +23,6 @@ export class CreateOrderItemDto {
   })
   @IsString()
   @IsNotEmpty()
-  @IsUUID()
   wineId: string;
 
   @ApiProperty({
@@ -136,7 +135,6 @@ export class CreateOrderDto {
   })
   @IsOptional()
   @IsString()
-  @IsUUID()
   shippingAddressId?: string;
 
   @ApiPropertyOptional({
@@ -244,7 +242,6 @@ export class OrderFiltersDto {
   })
   @IsOptional()
   @IsString()
-  @IsUUID()
   sellerId?: string;
 
   @ApiPropertyOptional({
@@ -253,7 +250,6 @@ export class OrderFiltersDto {
   })
   @IsOptional()
   @IsString()
-  @IsUUID()
   buyerId?: string;
 
   @ApiPropertyOptional({
@@ -295,4 +291,47 @@ export class OrderFiltersDto {
   @Max(100)
   @Type(() => Number)
   limit?: number;
+}
+
+// Cart DTOs
+export class AddToCartDto extends CreateOrderItemDto {}
+
+export class UpdateCartItemDto {
+  @ApiProperty({
+    description: 'New quantity for the cart item',
+    example: 3,
+    minimum: 1,
+    maximum: 999,
+  })
+  @IsInt()
+  @Min(1)
+  @Max(999)
+  quantity: number;
+}
+
+export class CheckoutCartDto {
+  @ApiPropertyOptional({
+    description: 'Existing shipping address ID',
+    example: 'clxxx-address-id-xxxx',
+  })
+  @IsOptional()
+  @IsString()
+  shippingAddressId?: string;
+
+  @ApiPropertyOptional({
+    description: 'New shipping address (if not using existing)',
+    type: CreateShippingAddressDto,
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreateShippingAddressDto)
+  shippingAddress?: CreateShippingAddressDto;
+
+  @ApiProperty({
+    description: 'Payment provider',
+    enum: PaymentProvider,
+    example: PaymentProvider.PAYPAL,
+  })
+  @IsEnum(PaymentProvider)
+  paymentProvider: PaymentProvider;
 }

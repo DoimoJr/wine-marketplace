@@ -78,6 +78,7 @@ export default function WinePage() {
   const [quantity, setQuantity] = useState(1)
   const [isFavorite, setIsFavorite] = useState(false)
   const [addingToCart, setAddingToCart] = useState(false)
+  const [wishlistLoading, setWishlistLoading] = useState(false)
 
   useEffect(() => {
     if (params.id) {
@@ -85,10 +86,20 @@ export default function WinePage() {
     }
   }, [params.id])
 
+  useEffect(() => {
+    if (params.id && session?.user) {
+      // Solo quando la sessione è completamente caricata con user data
+      checkWishlistStatus(params.id as string)
+    } else {
+      // Se non autenticato, il cuore dovrebbe essere vuoto e cliccabile
+      setIsFavorite(false)
+    }
+  }, [params.id, session?.user])
+
   const fetchWine = async (id: string) => {
     try {
       setLoading(true)
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3010/api'}/wines/${id}`)
+      const response = await fetch(`/api/wines/${id}`)
       
       if (!response.ok) {
         if (response.status === 404) {
@@ -164,19 +175,130 @@ export default function WinePage() {
     return typeMap[type] || type
   }
 
+  const checkWishlistStatus = async (wineId: string, retryCount = 0) => {
+    if (!session?.user) return
+    
+    try {
+      const response = await fetch(`/api/wishlist/check/${wineId}`, {
+        signal: AbortSignal.timeout(5000) // 5 second timeout
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setIsFavorite(data.isInWishlist)
+        console.log('✅ Wishlist status loaded:', data.isInWishlist)
+      } else if (response.status === 401 && retryCount < 2) {
+        // Retry on 401 (unauthorized) up to 2 times with delay
+        console.log(`🔄 Retrying wishlist check (attempt ${retryCount + 1})`)
+        setTimeout(() => {
+          checkWishlistStatus(wineId, retryCount + 1)
+        }, 1000) // Wait 1 second before retry
+      } else {
+        console.warn('⚠️ Failed to check wishlist status:', response.status)
+        setIsFavorite(false) // Default to false when API fails
+      }
+    } catch (error) {
+      console.error('❌ Error checking wishlist status:', error)
+      // Set to false as fallback when unable to check status
+      setIsFavorite(false)
+    }
+  }
+
+  const handleWishlistToggle = async () => {
+    console.log('❤️ Heart button clicked!', { 
+      session: !!session, 
+      wine: !!wine, 
+      wishlistLoading,
+      currentState: isFavorite ? 'favorited' : 'not favorited'
+    })
+    
+    if (!session?.user) {
+      console.log('🔐 No session or user data, redirecting to login')
+      router.push('/login')
+      return
+    }
+
+    if (!wine) {
+      console.log('⚠️ No wine data available')
+      return
+    }
+
+    if (wishlistLoading) {
+      console.log('⏳ Already processing wishlist request')
+      return
+    }
+
+    try {
+      setWishlistLoading(true)
+      
+      if (isFavorite) {
+        // Remove from wishlist
+        console.log('🗑️ Removing from wishlist:', wine.id)
+        const response = await fetch(`/api/wishlist/${wine.id}`, {
+          method: 'DELETE',
+          signal: AbortSignal.timeout(5000)
+        })
+        
+        if (response.ok) {
+          setIsFavorite(false)
+          console.log('✅ Successfully removed from wishlist')
+        } else {
+          const errorText = await response.text()
+          console.error('❌ Failed to remove from wishlist:', response.status, errorText)
+          if (response.status === 401) {
+            console.log('🔐 Session expired, redirecting to login')
+            router.push('/login')
+          } else {
+            alert('Errore durante la rimozione dalla wishlist. Riprova.')
+          }
+        }
+      } else {
+        // Add to wishlist
+        console.log('➕ Adding to wishlist:', wine.id)
+        const response = await fetch('/api/wishlist', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ wineId: wine.id }),
+          signal: AbortSignal.timeout(10000)
+        })
+        
+        if (response.ok) {
+          setIsFavorite(true)
+          console.log('✅ Successfully added to wishlist')
+        } else {
+          const errorText = await response.text()
+          console.error('❌ Failed to add to wishlist:', response.status, errorText)
+          if (response.status === 401) {
+            console.log('🔐 Session expired, redirecting to login')
+            router.push('/login')
+          } else {
+            alert('Errore durante l\'aggiunta alla wishlist. Riprova.')
+          }
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error toggling wishlist:', error)
+      alert('Errore di connessione. Verifica la tua connessione e riprova.')
+    } finally {
+      setWishlistLoading(false)
+      console.log('🔄 Wishlist loading state reset')
+    }
+  }
+
   const handleAddToCart = async () => {
-    if (!session) {
+    if (!session?.user) {
       router.push('/login')
       return
     }
 
     try {
       setAddingToCart(true)
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3010/api'}/orders/cart/add`, {
+      const response = await fetch(`/api/cart/items`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.accessToken}`
         },
         body: JSON.stringify({
           wineId: wine?.id,
@@ -321,13 +443,21 @@ export default function WinePage() {
                 </div>
                 <div className="flex space-x-2 ml-4">
                   <button 
-                    onClick={() => setIsFavorite(!isFavorite)}
-                    className="p-2 rounded-full border border-gray-300 hover:bg-gray-50 transition-colors"
+                    onClick={handleWishlistToggle}
+                    disabled={wishlistLoading}
+                    className={`p-2 rounded-full border border-gray-300 transition-all duration-200 ${
+                      wishlistLoading 
+                        ? 'opacity-50 cursor-wait' 
+                        : 'hover:bg-gray-50 hover:border-gray-400 cursor-pointer'
+                    } ${!session ? 'hover:bg-red-50 hover:border-red-300' : ''}`}
+                    title={!session ? 'Accedi per aggiungere alla wishlist' : isFavorite ? 'Rimuovi dalla wishlist' : 'Aggiungi alla wishlist'}
                   >
-                    {isFavorite ? (
-                      <HeartSolidIcon className="h-5 w-5 text-red-500" />
+                    {wishlistLoading ? (
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-400"></div>
+                    ) : isFavorite ? (
+                      <HeartSolidIcon className="h-5 w-5 text-red-500 transition-all duration-200" />
                     ) : (
-                      <HeartIcon className="h-5 w-5 text-gray-400" />
+                      <HeartIcon className="h-5 w-5 text-gray-400 hover:text-red-400 transition-all duration-200" />
                     )}
                   </button>
                   <button className="p-2 rounded-full border border-gray-300 hover:bg-gray-50 transition-colors">

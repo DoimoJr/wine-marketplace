@@ -79,3 +79,6 @@ packages/database/prisma/migrations/
 database-fix*.sql
 database-vacuum.js
 packages/database/vacuum-cleanup.js
+
+# Archive directory for old test files and screenshots
+archive/

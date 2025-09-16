@@ -32,7 +32,7 @@ This is a **wine marketplace monorepo** - a Vinted-style platform for buying and
 pnpm dev
 
 # Start individual apps
-pnpm --filter api dev        # NestJS API on :3002
+pnpm --filter api dev        # NestJS API on :3010
 pnpm --filter web dev        # Next.js web on :3000  
 pnpm --filter admin dev      # Next.js admin on :3001
 ```
@@ -179,14 +179,15 @@ The web application currently has:
 - **Priority**: Highest - Users can't view wine details or purchase
 
 #### 2. **Shopping Cart System** (`/cart`)
-- **Status**: Missing (API exists)
-- **API**: `GET /orders/cart`, `POST /orders/cart/add`, `PATCH /orders/cart/update`
-- **Components needed**:
-  - Cart page with wine list
-  - Quantity controls
-  - Price calculation
-  - Remove items functionality
-- **Priority**: Highest - No way to collect items for purchase
+- **Status**: ✅ **COMPLETED** - Multi-seller cart system implemented
+- **API**: Full cart API with multi-seller support
+- **Components implemented**:
+  - Multi-seller cart page with seller grouping
+  - Individual seller sections with shipping costs
+  - Quantity controls and price calculations
+  - Add/update/remove items functionality
+  - Separate checkout per seller with batchId linking
+- **Architecture**: CardMarket-style multi-seller approach solving shipping logistics
 
 #### 3. **Checkout Process** (`/checkout`)
 - **Status**: Missing
@@ -277,3 +278,97 @@ The web application currently has:
 - PaymentService supports multiple payment providers
 - Database schema already supports most features
 - WebSocket messaging system is ready for real-time chat
+
+## ✅ Multi-Seller Shopping Cart System
+
+### Implementation Summary
+**Status**: Completed - Full CardMarket-style multi-seller cart architecture
+
+### Problem Solved
+The original Vinted-style unified cart created shipping logistics problems since each seller needs to handle their own shipping. The new CardMarket approach groups items by seller, allowing independent shipping management while maintaining a unified user experience.
+
+### Database Changes
+- **Added `batchId` field** to Order model in `packages/database/prisma/schema.prisma`
+- **Purpose**: Links related orders from same checkout session for administrative tracking
+- **Updated with**: `pnpm --filter database db:push`
+
+### Backend Implementation (`apps/api/src/orders/orders.service.ts`)
+
+#### Core Architecture
+- **Cart Storage**: Uses Orders with `status: PENDING` instead of separate cart table
+- **Multi-seller Logic**: One cart order per seller per user
+- **Shipping Calculation**: Per-seller shipping costs based on order value and item count
+
+#### Key Methods Implemented
+```typescript
+// Groups cart items by seller with shipping costs
+async getCart(userId: string): Promise<CartResponse>
+
+// Finds existing seller cart or creates new one
+async addToCart(userId: string, addToCartDto: AddToCartDto)
+
+// Updates quantity within seller-specific cart
+async updateCartItem(userId: string, wineId: string, quantity: number)
+
+// Removes items from seller-specific cart
+async removeFromCart(userId: string, wineId: string)
+
+// Clears all cart orders for user
+async clearCart(userId: string)
+
+// Creates separate orders per seller with shared batchId
+async checkoutCart(userId: string, checkoutCartDto: CheckoutCartDto)
+
+// Calculates shipping based on order value and item count
+private calculateShippingForSeller(totalValue: number, itemCount: number): number
+```
+
+#### Shipping Logic
+```typescript
+// Free shipping over €100, otherwise €5 base + €2 per additional item
+if (totalValue >= 100) return 0;
+return 5 + Math.max(0, itemCount - 1) * 2;
+```
+
+### Frontend Implementation (`apps/web/src/app/cart/page.tsx`)
+
+#### Multi-Seller Interface
+- **Seller Grouping**: Items grouped by seller with clear visual separation
+- **Seller Headers**: Display seller name and individual shipping costs
+- **Order Summary**: Shows breakdown per seller plus grand total
+- **Individual Controls**: Quantity/remove controls per item within seller context
+
+#### TypeScript Interfaces
+```typescript
+interface SellerCart {
+  seller: { id: string; username: string; firstName: string; lastName: string }
+  orderId: string
+  items: CartItem[]
+  subtotal: number
+  shippingCost: number
+  total: number
+}
+
+interface CartResponse {
+  sellers: SellerCart[]
+  grandTotal: number
+  totalItems: number
+}
+```
+
+### API Integration (`apps/web/src/app/api/cart/`)
+- **Complete proxy structure** for all cart operations
+- **Multi-endpoint support**: GET/POST/PATCH/DELETE across different routes
+- **Type-safe integration** with backend service methods
+
+### Benefits Achieved
+1. **Shipping Logistics Solved**: Each seller manages their own shipping independently
+2. **Order Separation**: Clear boundaries between different sellers' items
+3. **Unified UX**: Still feels like single cart to user despite backend complexity
+4. **Administrative Tracking**: batchId allows linking related orders from same session
+5. **Scalable Architecture**: Supports unlimited sellers in single cart experience
+
+### Testing Status
+- **Backend API**: All cart endpoints tested and functional on :3010
+- **Frontend Interface**: Cart page displays multi-seller structure on :3000
+- **Integration**: Complete end-to-end workflow verified

@@ -21,7 +21,10 @@ import {
   CreateOrderDto, 
   UpdateOrderStatusDto, 
   ProcessPaymentDto, 
-  OrderFiltersDto 
+  OrderFiltersDto,
+  AddToCartDto,
+  UpdateCartItemDto,
+  CheckoutCartDto
 } from './dto/order.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -97,51 +100,57 @@ export class OrdersController {
   }
 
   // Shopping Cart endpoints
-  // @Get('cart')
-  // @ApiOperation({ summary: 'Get current user cart' })
-  // @ApiResponse({ status: 200, description: 'Cart retrieved successfully' })
-  // getCart(@CurrentUser() user: any): Promise<any> {
-  //   return this.ordersService.getCart(user.id);
-  // }
+  @Get('cart')
+  @ApiOperation({ summary: 'Get current user cart' })
+  @ApiResponse({ status: 200, description: 'Cart retrieved successfully' })
+  getCart(@CurrentUser() user: any): Promise<any> {
+    return this.ordersService.getCart(user.id);
+  }
 
-  // @Post('cart/items')
-  // @ApiOperation({ summary: 'Add item to cart' })
-  // @ApiResponse({ status: 201, description: 'Item added to cart successfully' })
-  // addToCart(@Body() createOrderItemDto: any, @CurrentUser() user: any): Promise<any> {
-  //   return this.ordersService.addToCart(user.id, createOrderItemDto);
-  // }
+  @Post('cart/items')
+  @ApiOperation({ summary: 'Add item to cart' })
+  @ApiResponse({ status: 201, description: 'Item added to cart successfully' })
+  @ApiResponse({ status: 400, description: 'Wine not available or insufficient quantity' })
+  addToCart(@Body() addToCartDto: AddToCartDto, @CurrentUser() user: any): Promise<any> {
+    return this.ordersService.addToCart(user.id, addToCartDto);
+  }
 
-  // @Patch('cart/items/:wineId')
-  // @ApiOperation({ summary: 'Update cart item quantity' })
-  // @ApiResponse({ status: 200, description: 'Cart item updated successfully' })
-  // updateCartItem(
-  //   @Param('wineId') wineId: string,
-  //   @Body() body: { quantity: number },
-  //   @CurrentUser() user: any,
-  // ): Promise<any> {
-  //   return this.ordersService.updateCartItem(user.id, wineId, body.quantity);
-  // }
+  @Patch('cart/items/:wineId')
+  @ApiOperation({ summary: 'Update cart item quantity' })
+  @ApiResponse({ status: 200, description: 'Cart item updated successfully' })
+  @ApiResponse({ status: 404, description: 'Item not found in cart' })
+  @ApiResponse({ status: 400, description: 'Insufficient quantity available' })
+  updateCartItem(
+    @Param('wineId') wineId: string,
+    @Body() updateCartItemDto: UpdateCartItemDto,
+    @CurrentUser() user: any,
+  ): Promise<any> {
+    return this.ordersService.updateCartItem(user.id, wineId, updateCartItemDto.quantity);
+  }
 
-  // @Delete('cart/items/:wineId')
-  // @ApiOperation({ summary: 'Remove item from cart' })
-  // @ApiResponse({ status: 200, description: 'Item removed from cart successfully' })
-  // removeFromCart(@Param('wineId') wineId: string, @CurrentUser() user: any): Promise<any> {
-  //   return this.ordersService.removeFromCart(user.id, wineId);
-  // }
+  @Delete('cart/items/:wineId')
+  @ApiOperation({ summary: 'Remove item from cart' })
+  @ApiResponse({ status: 200, description: 'Item removed from cart successfully' })
+  @ApiResponse({ status: 404, description: 'Item not found in cart' })
+  removeFromCart(@Param('wineId') wineId: string, @CurrentUser() user: any): Promise<any> {
+    return this.ordersService.removeFromCart(user.id, wineId);
+  }
 
-  // @Delete('cart')
-  // @ApiOperation({ summary: 'Clear entire cart' })
-  // @ApiResponse({ status: 200, description: 'Cart cleared successfully' })
-  // clearCart(@CurrentUser() user: any): Promise<any> {
-  //   return this.ordersService.clearCart(user.id);
-  // }
+  @Delete('cart')
+  @ApiOperation({ summary: 'Clear entire cart' })
+  @ApiResponse({ status: 200, description: 'Cart cleared successfully' })
+  @ApiResponse({ status: 404, description: 'Cart not found' })
+  clearCart(@CurrentUser() user: any): Promise<any> {
+    return this.ordersService.clearCart(user.id);
+  }
 
-  // @Post('cart/checkout')
-  // @ApiOperation({ summary: 'Create order from cart' })
-  // @ApiResponse({ status: 201, description: 'Order created from cart successfully' })
-  // checkoutCart(@Body() checkoutData: any, @CurrentUser() user: any): Promise<any> {
-  //   return this.ordersService.checkoutCart(user.id, checkoutData);
-  // }
+  @Post('cart/checkout')
+  @ApiOperation({ summary: 'Create order from cart' })
+  @ApiResponse({ status: 201, description: 'Order created from cart successfully' })
+  @ApiResponse({ status: 400, description: 'Cart is empty or items unavailable' })
+  checkoutCart(@Body() checkoutCartDto: CheckoutCartDto, @CurrentUser() user: any): Promise<any> {
+    return this.ordersService.checkoutCart(user.id, checkoutCartDto);
+  }
 
   @Get('user/:userId')
   @UseGuards(RolesGuard)
