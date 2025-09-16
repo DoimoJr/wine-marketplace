@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { 
+import {
   ShoppingCartIcon,
   TrashIcon,
   PlusIcon,
@@ -16,6 +16,7 @@ import {
   CreditCardIcon
 } from '@heroicons/react/24/outline'
 import { ShoppingCartIcon as ShoppingCartSolidIcon } from '@heroicons/react/24/solid'
+import Navbar from '../../components/Navbar'
 
 interface CartItem {
   id: string
@@ -82,20 +83,38 @@ export default function CartPage() {
 
   const fetchCart = async () => {
     try {
+      console.log('🛒 CartPage: Starting to fetch cart data...')
       setLoading(true)
+      setError(null)
+
       const response = await fetch('/api/cart')
-      
+
+      console.log('📡 CartPage: API response:', {
+        ok: response.ok,
+        status: response.status,
+        statusText: response.statusText
+      })
+
       if (!response.ok) {
-        throw new Error('Failed to fetch cart')
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        console.error('❌ CartPage: Failed to fetch cart:', errorData)
+        throw new Error(errorData.error || 'Failed to fetch cart')
       }
 
       const data = await response.json()
+      console.log('✅ CartPage: Cart data received:', {
+        sellersCount: data.sellers?.length || 0,
+        totalItems: data.totalItems || 0,
+        grandTotal: data.grandTotal || 0,
+        fullData: data
+      })
       setCart(data)
     } catch (error) {
-      console.error('Error fetching cart:', error)
+      console.error('❌ CartPage: Error fetching cart:', error)
       setError('Errore nel caricamento del carrello')
     } finally {
       setLoading(false)
+      console.log('🔄 CartPage: Loading state reset')
     }
   }
 
@@ -234,6 +253,7 @@ export default function CartPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Navbar currentPage="cart" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">

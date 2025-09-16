@@ -17,6 +17,7 @@ import {
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline'
 import { HeartIcon as HeartSolidIcon, StarIcon as StarSolidIcon } from '@heroicons/react/24/solid'
+import Navbar from '../../../components/Navbar'
 
 interface Wine {
   id: string
@@ -79,12 +80,16 @@ export default function WinePage() {
   const [isFavorite, setIsFavorite] = useState(false)
   const [addingToCart, setAddingToCart] = useState(false)
   const [wishlistLoading, setWishlistLoading] = useState(false)
+  const [cartQuantity, setCartQuantity] = useState(0)
 
   useEffect(() => {
     if (params.id) {
       fetchWine(params.id as string)
+      if (session?.user) {
+        fetchCartQuantity(params.id as string)
+      }
     }
-  }, [params.id])
+  }, [params.id, session?.user])
 
   useEffect(() => {
     if (params.id && session?.user) {
@@ -95,6 +100,13 @@ export default function WinePage() {
       setIsFavorite(false)
     }
   }, [params.id, session?.user])
+
+  // Reset quantità se supera quelle disponibili (ad es. dopo acquisto di qualcun altro)
+  useEffect(() => {
+    if (wine && quantity > wine.quantity) {
+      setQuantity(Math.max(1, Math.min(wine.quantity, 1)))
+    }
+  }, [wine?.quantity, quantity])
 
   const fetchWine = async (id: string) => {
     try {
@@ -117,6 +129,48 @@ export default function WinePage() {
       setError('Errore nel caricamento del vino')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchCartQuantity = async (wineId: string) => {
+    try {
+      if (!session?.user) {
+        setCartQuantity(0)
+        return
+      }
+
+      console.log('🛒 Fetching cart quantity for wine:', wineId)
+      const response = await fetch('/api/cart')
+
+      if (!response.ok) {
+        console.log('❌ Cart not found or error, assuming 0 quantity')
+        setCartQuantity(0)
+        return
+      }
+
+      const cartData = await response.json()
+      console.log('📦 Cart data received:', cartData)
+
+      // Trova la quantità di questo specifico vino nel carrello
+      let totalQuantityInCart = 0
+
+      if (cartData.sellers && Array.isArray(cartData.sellers)) {
+        cartData.sellers.forEach((seller: any) => {
+          if (seller.items && Array.isArray(seller.items)) {
+            seller.items.forEach((item: any) => {
+              if (item.wine && item.wine.id === wineId) {
+                totalQuantityInCart += item.quantity
+              }
+            })
+          }
+        })
+      }
+
+      console.log(`🔢 Total quantity of wine ${wineId} in cart: ${totalQuantityInCart}`)
+      setCartQuantity(totalQuantityInCart)
+    } catch (error) {
+      console.error('❌ Error fetching cart quantity:', error)
+      setCartQuantity(0)
     }
   }
 
@@ -288,35 +342,117 @@ export default function WinePage() {
   }
 
   const handleAddToCart = async () => {
+    console.log('🛒 Add to cart clicked!', {
+      session: !!session,
+      sessionUser: !!session?.user,
+      sessionAccessToken: !!session?.accessToken,
+      wine: !!wine,
+      wineId: wine?.id,
+      quantity,
+      addingToCart,
+      wineQuantity: wine?.quantity
+    })
+
     if (!session?.user) {
+      console.log('🔐 No session or user data, redirecting to login')
       router.push('/login')
+      return
+    }
+
+    if (!wine) {
+      console.log('⚠️ No wine data available')
+      return
+    }
+
+    const availableToAdd = wine.quantity - cartQuantity
+
+    // Controllo di sicurezza: non fare chiamata API se non ci sono unità disponibili da aggiungere
+    if (availableToAdd <= 0) {
+      console.log('🚫 No more units can be added to cart, preventing API call')
+      return
+    }
+
+    // Controllo di sicurezza: quantità richiesta non può superare quella disponibile da aggiungere
+    if (quantity > availableToAdd) {
+      console.log(`🚫 Requested quantity ${quantity} exceeds available to add ${availableToAdd}`)
+      console.log(`🔍 Frontend state - quantity: ${quantity}, wine.quantity: ${wine.quantity}, cartQuantity: ${cartQuantity}`)
+      alert(`Errore: puoi aggiungere massimo ${availableToAdd} unità. La quantità è stata corretta.`)
+      setQuantity(Math.min(1, availableToAdd))
+      return
+    }
+
+    if (addingToCart) {
+      console.log('⏳ Already processing add to cart request')
       return
     }
 
     try {
       setAddingToCart(true)
+
+      // Forza la quantità corretta (non può superare quella disponibile da aggiungere)
+      const safeQuantity = Math.min(quantity, availableToAdd)
+      console.log(`📦 Starting add to cart request with safe quantity: ${safeQuantity} (requested: ${quantity}, available to add: ${availableToAdd})`)
+
       const response = await fetch(`/api/cart/items`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          wineId: wine?.id,
-          quantity
-        })
+          wineId: wine.id,
+          quantity: safeQuantity
+        }),
+        signal: AbortSignal.timeout(10000) // 10 second timeout
+      })
+
+      console.log('📡 Cart API response:', {
+        ok: response.ok,
+        status: response.status,
+        statusText: response.statusText
       })
 
       if (response.ok) {
-        // TODO: Show success toast
-        console.log('Added to cart successfully')
+        const responseData = await response.json()
+        console.log('✅ Successfully added to cart:', responseData)
+        alert(`✅ "${wine.title}" aggiunto al carrello!`)
+
+        // Refresh cart quantity after successful addition
+        await fetchCartQuantity(wine.id)
+
+        // Optional: redirect to cart page
+        // router.push('/cart')
       } else {
-        // TODO: Show error toast
-        console.error('Failed to add to cart')
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        console.error('❌ Failed to add to cart:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData
+        })
+
+        if (response.status === 401) {
+          console.log('🔐 Session expired, redirecting to login')
+          alert('Sessione scaduta. Effettua nuovamente il login.')
+          router.push('/login')
+        } else if (response.status === 400) {
+          alert(`Errore: ${errorData.error || 'Impossibile aggiungere al carrello'}`)
+        } else {
+          alert('Errore durante l\'aggiunta al carrello. Riprova.')
+        }
       }
     } catch (error) {
-      console.error('Error adding to cart:', error)
+      console.error('❌ Error adding to cart:', error)
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          alert('Richiesta timeout. Verifica la connessione e riprova.')
+        } else {
+          alert('Errore di connessione. Verifica la tua connessione e riprova.')
+        }
+      } else {
+        alert('Errore imprevisto. Riprova.')
+      }
     } finally {
       setAddingToCart(false)
+      console.log('🔄 Add to cart loading state reset')
     }
   }
 
@@ -356,6 +492,7 @@ export default function WinePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Navbar currentPage="browse" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Breadcrumb */}
         <nav className="flex mb-8" aria-label="Breadcrumb">
@@ -537,8 +674,45 @@ export default function WinePage() {
 
                 <div>
                   <span className="text-sm font-medium text-gray-700">Quantità disponibile:</span>
-                  <span className="ml-2 text-sm text-gray-900">{wine.quantity}</span>
+                  <span className={`ml-2 text-sm font-semibold ${
+                    wine.quantity === 0
+                      ? 'text-red-600'
+                      : wine.quantity <= 3
+                      ? 'text-orange-600'
+                      : 'text-green-600'
+                  }`}>
+                    {wine.quantity === 0
+                      ? 'Esaurito'
+                      : wine.quantity <= 3
+                      ? `Solo ${wine.quantity} rimaste`
+                      : wine.quantity
+                    }
+                  </span>
                 </div>
+
+                {cartQuantity > 0 && (
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Già nel carrello:</span>
+                    <span className="ml-2 text-sm font-semibold text-blue-600">
+                      {cartQuantity} {cartQuantity === 1 ? 'unità' : 'unità'}
+                    </span>
+                  </div>
+                )}
+
+                {cartQuantity > 0 && (
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Puoi aggiungerne ancora:</span>
+                    <span className={`ml-2 text-sm font-semibold ${
+                      wine.quantity - cartQuantity === 0
+                        ? 'text-red-600'
+                        : wine.quantity - cartQuantity <= 2
+                        ? 'text-orange-600'
+                        : 'text-green-600'
+                    }`}>
+                      {wine.quantity - cartQuantity}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -555,7 +729,7 @@ export default function WinePage() {
                     onChange={(e) => setQuantity(parseInt(e.target.value))}
                     className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:ring-wine-500 focus:border-wine-500"
                   >
-                    {Array.from({ length: Math.min(wine.quantity, 10) }, (_, i) => (
+                    {Array.from({ length: Math.min(wine.quantity - cartQuantity, 10) }, (_, i) => (
                       <option key={i + 1} value={i + 1}>
                         {i + 1}
                       </option>
@@ -566,15 +740,25 @@ export default function WinePage() {
 
               <button
                 onClick={handleAddToCart}
-                disabled={addingToCart || wine.quantity === 0}
-                className="w-full bg-wine-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-wine-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                disabled={addingToCart || wine.quantity - cartQuantity <= 0}
+                className={`w-full py-3 px-6 rounded-lg font-medium transition-all duration-200 flex items-center justify-center space-x-2 ${
+                  wine.quantity - cartQuantity <= 0
+                    ? 'bg-red-100 text-red-600 cursor-not-allowed border-2 border-red-200'
+                    : addingToCart
+                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed opacity-75'
+                    : 'bg-wine-600 text-white hover:bg-wine-700 cursor-pointer'
+                }`}
               >
-                <ShoppingCartIcon className="h-5 w-5" />
+                {wine.quantity - cartQuantity <= 0 ? (
+                  <ExclamationTriangleIcon className="h-5 w-5" />
+                ) : (
+                  <ShoppingCartIcon className="h-5 w-5" />
+                )}
                 <span>
-                  {addingToCart 
-                    ? 'Aggiungendo...' 
-                    : wine.quantity === 0 
-                    ? 'Non disponibile' 
+                  {addingToCart
+                    ? 'Aggiungendo...'
+                    : wine.quantity - cartQuantity <= 0
+                    ? cartQuantity >= wine.quantity ? 'Già tutto nel carrello' : 'Esaurito'
                     : 'Aggiungi al carrello'
                   }
                 </span>
