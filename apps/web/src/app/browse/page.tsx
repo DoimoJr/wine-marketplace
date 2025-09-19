@@ -49,11 +49,11 @@ export default function BrowsePage() {
       const queryParams = new URLSearchParams({
         page: currentPage.toString(),
         limit: '12',
-        ...(filters.type && { type: filters.type }),
+        ...(filters.type && { wineType: filters.type }),
         ...(filters.country && { country: filters.country }),
         ...(filters.search && { search: filters.search }),
-        ...(filters.minPrice && { minPrice: filters.minPrice }),
-        ...(filters.maxPrice && { maxPrice: filters.maxPrice }),
+        ...(filters.minPrice && { priceMin: filters.minPrice }),
+        ...(filters.maxPrice && { priceMax: filters.maxPrice }),
         ...(filters.annata && { annataMin: filters.annata })
       })
 
