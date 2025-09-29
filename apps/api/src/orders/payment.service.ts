@@ -19,6 +19,8 @@ export class PaymentService {
         return this.processStripePayment(orderId, amount, paymentData);
       case PaymentProvider.ESCROW:
         return this.processEscrowPayment(orderId, amount, paymentData);
+      case PaymentProvider.NEXI_PAY:
+        return this.processNexiPayment(orderId, amount, paymentData);
       default:
         throw new BadRequestException('Unsupported payment provider');
     }
@@ -36,6 +38,8 @@ export class PaymentService {
         return this.refundStripePayment(paymentId, amount);
       case PaymentProvider.ESCROW:
         return this.refundEscrowPayment(paymentId, amount);
+      case PaymentProvider.NEXI_PAY:
+        return this.refundNexiPayment(paymentId, amount);
       default:
         throw new BadRequestException('Unsupported payment provider');
     }
@@ -197,17 +201,127 @@ export class PaymentService {
     }
   }
 
+  private async processNexiPayment(orderId: string, amount: number, paymentData: any) {
+    // Nexi Pay API integration
+    try {
+      console.log(`Processing Nexi Pay payment for order ${orderId}, amount: ${amount}`);
+
+      // Get Nexi configuration from environment
+      const nexiAlias = this.configService.get('NEXI_ALIAS');
+      const nexiMacKey = this.configService.get('NEXI_MAC_KEY');
+      const nexiTerminalId = this.configService.get('NEXI_TERMINAL_ID');
+      const nexiEnvironment = this.configService.get('NEXI_ENVIRONMENT', 'test');
+
+      if (!nexiAlias || !nexiMacKey) {
+        throw new Error('Nexi Pay configuration missing. Check NEXI_ALIAS and NEXI_MAC_KEY in environment variables.');
+      }
+
+      console.log('🔧 Using Nexi configuration:', {
+        alias: nexiAlias,
+        terminalId: nexiTerminalId,
+        environment: nexiEnvironment,
+        macKeyPresent: !!nexiMacKey
+      });
+
+      // In real implementation, this would:
+      // 1. Create payment request with MAC signature
+      // 2. Redirect user to Nexi payment page
+      // 3. Handle callback with result verification
+      // 4. Validate MAC signature on response
+
+      // For now, simulate payment processing
+      await new Promise(resolve => setTimeout(resolve, 1200));
+
+      // Simulate successful Nexi payment
+      const transactionId = `NEXI_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      return {
+        success: true,
+        transactionId,
+        status: PaymentStatus.COMPLETED,
+        amount,
+        fees: amount * 0.018, // Nexi fee simulation (lower than PayPal/Stripe)
+        provider: PaymentProvider.NEXI_PAY,
+        redirectUrl: `https://int-ecommerce.nexi.it/ecomm/ecomm/DispatcherServlet?${transactionId}`, // Test environment URL
+        nexiOrderId: transactionId,
+        environment: nexiEnvironment,
+      };
+    } catch (error) {
+      console.error('Nexi Pay payment failed:', error);
+      return {
+        success: false,
+        status: PaymentStatus.FAILED,
+        error: (error as Error).message,
+        provider: PaymentProvider.NEXI_PAY,
+      };
+    }
+  }
+
+  private async refundNexiPayment(paymentId: string, amount: number) {
+    try {
+      console.log(`Processing Nexi Pay refund for payment ${paymentId}, amount: ${amount}`);
+
+      // Get Nexi configuration
+      const nexiAlias = this.configService.get('NEXI_ALIAS');
+      const nexiMacKey = this.configService.get('NEXI_MAC_KEY');
+
+      if (!nexiAlias || !nexiMacKey) {
+        throw new Error('Nexi Pay configuration missing for refund');
+      }
+
+      // In real implementation, this would:
+      // 1. Create refund request with MAC signature
+      // 2. Call Nexi refund API
+      // 3. Validate response and MAC signature
+
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      return {
+        success: true,
+        refundId: `NEXIR_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        status: PaymentStatus.REFUNDED,
+        amount,
+        provider: PaymentProvider.NEXI_PAY,
+        originalPaymentId: paymentId,
+      };
+    } catch (error) {
+      console.error('Nexi Pay refund failed:', error);
+      return {
+        success: false,
+        error: (error as Error).message,
+        provider: PaymentProvider.NEXI_PAY,
+      };
+    }
+  }
+
+  // Utility method for generating Nexi Pay MAC signature
+  private generateNexiMac(data: Record<string, string>, macKey: string): string {
+    // In real implementation, this would:
+    // 1. Sort parameters alphabetically
+    // 2. Concatenate key=value pairs
+    // 3. Append MAC key
+    // 4. Calculate SHA1 hash
+    const crypto = require('crypto');
+
+    const sortedKeys = Object.keys(data).sort();
+    const concatenated = sortedKeys
+      .map(key => `${key}=${data[key]}`)
+      .join('') + macKey;
+
+    return crypto.createHash('sha1').update(concatenated).digest('hex').toUpperCase();
+  }
+
   async generateShippingLabel(orderId: string, shippingAddress: any) {
     // This would integrate with shipping providers like DHL, BRT, etc.
     try {
       console.log(`Generating shipping label for order ${orderId}`);
-      
+
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
+
       // Simulate label generation
       const trackingNumber = `TN${Date.now()}${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
       const labelUrl = `https://labels.example.com/${orderId}_${trackingNumber}.pdf`;
-      
+
       return {
         success: true,
         trackingNumber,

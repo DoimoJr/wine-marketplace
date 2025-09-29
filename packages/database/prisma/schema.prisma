@@ -382,6 +382,7 @@ enum PaymentProvider {
   PAYPAL
   STRIPE
   ESCROW
+  NEXI_PAY
 }
 
 enum PaymentStatus {

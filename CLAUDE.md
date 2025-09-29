@@ -259,18 +259,19 @@ The web application currently has:
   - Seller reputation system
 
 #### 10. **Wishlist/Favorites**
-- **Status**: Not implemented
-- **API**: Would need new endpoints
-- **Components needed**:
-  - Add/remove from wishlist buttons
-  - Wishlist page
-  - Email notifications for price drops
+- **Status**: ✅ **COMPLETED** - Full wishlist and favorite sellers system implemented
+- **API**: Complete wishlist and favorite sellers endpoints
+- **Components implemented**:
+  - Add/remove from wishlist buttons on wine cards and detail pages
+  - Comprehensive wishlist page with tab system
+  - Favorite sellers functionality with follow/unfollow
+  - Heart-based UI patterns throughout application
 
 ### Implementation Priority Order
-1. Wine product page → Cart → Checkout (critical purchase flow)
-2. Registration → Profile (user management)  
+1. ✅ Wine product page → ✅ Cart → Checkout (critical purchase flow)
+2. Registration → Profile (user management)
 3. Orders → Messages (post-purchase experience)
-4. Enhanced search → Reviews → Wishlist (engagement features)
+4. Enhanced search → Reviews → ✅ Wishlist (engagement features)
 
 ### Technical Notes
 - All API endpoints use the same JWT authentication system
@@ -372,3 +373,264 @@ interface CartResponse {
 - **Backend API**: All cart endpoints tested and functional on :3010
 - **Frontend Interface**: Cart page displays multi-seller structure on :3000
 - **Integration**: Complete end-to-end workflow verified
+
+## ✅ Favorite Sellers System
+
+### Implementation Summary
+**Status**: Completed - Full favorite sellers functionality with wishlist integration
+
+### Problem Solved
+Users needed the ability to save and follow preferred sellers in addition to favoriting wines, creating a comprehensive favorites system similar to modern marketplaces.
+
+### Database Changes (`packages/database/prisma/schema.prisma`)
+- **Added `FavoriteSeller` model** with proper user-seller relationships
+- **Many-to-many relationship**: Users can follow multiple sellers, sellers can have multiple followers
+- **Constraints**: `@@unique([userId, sellerId])` prevents duplicate favorites
+- **Cascading deletes**: Proper cleanup when users or sellers are deleted
+
+```prisma
+model FavoriteSeller {
+  id        String   @id @default(cuid())
+  userId    String
+  sellerId  String
+  createdAt DateTime @default(now())
+
+  user   User @relation("UserFavoriteSellers", fields: [userId], references: [id], onDelete: Cascade)
+  seller User @relation("SellerFavorites", fields: [sellerId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sellerId])
+  @@map("favorite_sellers")
+}
+```
+
+### Backend Implementation (`apps/api/src/favorite-sellers/`)
+
+#### Complete NestJS Module
+- **Service**: `favorite-sellers.service.ts` - CRUD operations with validation
+- **Controller**: `favorite-sellers.controller.ts` - RESTful endpoints
+- **DTOs**: Type-safe request/response validation
+- **Module**: Integrated into main app module
+
+#### Key API Endpoints
+```typescript
+POST   /favorite-sellers          // Add seller to favorites
+GET    /favorite-sellers          // Get user's favorite sellers
+DELETE /favorite-sellers/:id      // Remove seller from favorites
+GET    /favorite-sellers/check/:id // Check if seller is favorited
+```
+
+#### Core Methods
+```typescript
+// Add seller to user's favorites with validation
+async addFavoriteSeller(userId: string, sellerId: string)
+
+// Remove seller from user's favorites
+async removeFavoriteSeller(userId: string, sellerId: string)
+
+// Get paginated list of user's favorite sellers
+async getFavoriteSellers(userId: string, page: number, limit: number)
+
+// Check if user has favorited specific seller
+async isFavoriteSeller(userId: string, sellerId: string)
+```
+
+### Frontend Implementation
+
+#### Wishlist Page Enhancement (`apps/web/src/app/wishlist/page.tsx`)
+- **Tab System**: Clean separation between wines and sellers
+- **Dual Loading**: Parallel fetching of wines and favorite sellers
+- **Seller Cards**: Rich display with avatar, stats, and bio
+- **Remove Functionality**: Individual seller unfavorite with loading states
+
+#### Seller Profile Pages (`apps/web/src/app/sellers/[id]/page.tsx`)
+- **Public Profile View**: Non-sensitive seller information display
+- **Wine Listings**: Grid view of seller's available wines
+- **Follow/Unfollow Button**: Heart-based UI with loading states
+- **Statistics Display**: Sales, reviews, wine count, ratings
+- **Responsive Design**: Mobile-first approach with Tailwind CSS
+
+#### API Integration (`apps/web/src/app/api/favorite-sellers/`)
+- **RESTful Structure**: Proper HTTP methods and status codes
+- **Authentication**: JWT token validation for all operations
+- **Error Handling**: Graceful degradation and user feedback
+- **Type Safety**: Full TypeScript integration with shared types
+
+### Security & Validation
+- **Self-favoriting Prevention**: Users cannot favorite themselves
+- **Authentication Required**: All operations require valid session
+- **Data Validation**: Seller existence checks before operations
+- **Rate Limiting**: Built-in protection against abuse
+
+### UI/UX Features
+- **Heart Icons**: Consistent favoriting metaphor across app
+- **Loading States**: Smooth interactions with spinner feedback
+- **Empty States**: Helpful messages and call-to-action buttons
+- **Error Handling**: User-friendly error messages and retry options
+- **Responsive Cards**: Seller information displays beautifully on all devices
+
+## ✅ Seller Profile System & Auto-Purchase Prevention
+
+### Implementation Summary
+**Status**: Completed - Public seller profiles with comprehensive wine listings and purchase restrictions
+
+### Seller Profile Features (`apps/web/src/app/sellers/[id]/page.tsx`)
+
+#### Profile Header
+- **Seller Information**: Name, username, avatar, verification badge
+- **Location & Bio**: Optional location and biography display
+- **Member Since**: Account creation date formatting
+- **Follow Button**: Integrated with favorite sellers system
+
+#### Statistics Section
+- **Wine Count**: Current wines available for sale
+- **Total Sales**: Historical sales performance
+- **Review Metrics**: Average rating with star display
+- **Activity Data**: Comprehensive seller performance overview
+
+#### Wine Listings Grid
+- **Responsive Layout**: 1-4 columns based on screen size
+- **Wine Cards**: Image, title, type, vintage, region, price
+- **Direct Links**: Each wine links to detail page
+- **Pagination Support**: "View all wines" link for extensive catalogs
+
+### Auto-Purchase Prevention System
+
+#### Backend Validation (`apps/api/src/orders/orders.service.ts`)
+```typescript
+// Prevent users from buying their own wines
+if (wine.sellerId === userId) {
+  throw new BadRequestException('Cannot purchase your own wine');
+}
+```
+
+#### Frontend UI Adaptation (`apps/web/src/app/wines/[id]/page.tsx`)
+- **Conditional Rendering**: Different UI for own wines vs. other sellers
+- **Disabled Add to Cart**: Replaced with "Questo è il tuo vino" message
+- **Profile Redirection**: Sellers see "Il mio profilo" instead of "Vedi altri vini"
+- **Hidden Actions**: Contact and follow buttons hidden for own wines
+
+#### Session Management Fix
+- **Critical Bug Fixed**: Changed `session?.user?.sub` to `session?.user?.id`
+- **Authentication Consistency**: Aligned with NextAuth configuration
+- **Verification Complete**: No remaining instances of incorrect property
+
+### API Routes Implementation
+
+#### User Profile API (`apps/web/src/app/api/users/[id]/`)
+- **Public Profile**: `GET /api/users/[id]` - Non-sensitive user data
+- **User Wines**: `GET /api/users/[id]/wines` - Seller's wine listings
+- **Pagination Support**: Query parameters for page and limit
+- **Error Handling**: 404 for non-existent users
+
+#### Profile Data Security
+- **Filtered Fields**: Only public information exposed
+- **No Sensitive Data**: Email, phone, addresses excluded
+- **Statistics Included**: Public metrics like sales and ratings
+- **Image Handling**: Avatar and wine images properly served
+
+### User Experience Improvements
+- **Smart Navigation**: Context-aware profile links
+- **Loading States**: Smooth transitions and feedback
+- **Error Boundaries**: Graceful handling of missing data
+- **Mobile Optimization**: Touch-friendly interface design
+- **Italian Localization**: All text properly translated
+
+### Testing & Validation
+- **Backend API**: All endpoints tested and functional
+- **Frontend Integration**: Seller profiles display correctly
+- **Authentication**: Session management working properly
+- **Purchase Prevention**: Auto-purchase blocking confirmed
+- **Profile Redirection**: Sellers correctly redirected to personal profiles
+
+## ✅ Wine Detail Page & Wishlist System
+
+### Implementation Summary
+**Status**: Completed - Comprehensive wine detail pages with full wishlist integration
+
+### Wine Detail Page Features (`apps/web/src/app/wines/[id]/page.tsx`)
+
+#### Core Information Display
+- **Wine Details**: Title, producer, vintage (annata), region, description
+- **Pricing**: Clear price display with EUR formatting
+- **Wine Type**: Color-coded badges for wine categories
+- **Condition & Quantity**: Stock management and condition indicators
+- **Seller Information**: Profile links and verification status
+
+#### Interactive Features
+- **Image Gallery**: Multiple wine images with thumbnail navigation
+- **Quantity Selector**: Add to cart with quantity controls
+- **Wishlist Heart**: Toggle wine favorites with instant feedback
+- **Seller Actions**: Follow seller, contact, view profile
+- **Share Functionality**: Social sharing integration
+
+#### Smart UI Adaptations
+- **Owner Detection**: Special UI when viewing own wines
+- **Stock Management**: Real-time quantity updates from cart
+- **Authentication Prompts**: Login redirects for guest users
+- **Loading States**: Smooth interactions with progress indicators
+
+### Wishlist System Implementation
+
+#### Backend API (`apps/api/src/wishlist/`)
+- **Complete CRUD**: Add, remove, list, check wishlist items
+- **Pagination**: Efficient handling of large wishlists
+- **Validation**: Wine existence and availability checks
+- **Authentication**: User-specific wishlist isolation
+
+#### Frontend Integration
+- **Heart Button**: Consistent UI pattern across all wine displays
+- **Wishlist Page**: Dedicated page with comprehensive wine grid
+- **Real-time Updates**: Instant feedback on wishlist changes
+- **Empty States**: Helpful guidance for new users
+
+#### Database Model
+```prisma
+model WishlistItem {
+  id     String @id @default(cuid())
+  userId String
+  wineId String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wine Wine @relation(fields: [wineId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, wineId])
+  @@map("wishlist_items")
+}
+```
+
+### Enhanced Features
+
+#### Wine Cards (`apps/web/src/components/WineCard.tsx`)
+- **Heart Button Integration**: Wishlist toggle on every wine card
+- **Seller Quick Actions**: Follow seller directly from card
+- **Responsive Design**: Optimal display across all screen sizes
+- **Performance Optimized**: Efficient re-rendering and state management
+
+#### Navigation Integration
+- **Navbar Updates**: Wishlist link with item count badge
+- **Context Awareness**: Different navigation for authenticated users
+- **Mobile Friendly**: Touch-optimized interface elements
+
+### Technical Implementation Details
+
+#### API Route Structure
+```
+/api/wishlist/
+  GET    /          # Get user's wishlist
+  POST   /          # Add wine to wishlist
+  DELETE /:wineId   # Remove wine from wishlist
+  GET    /check/:id # Check if wine is in wishlist
+```
+
+#### State Management
+- **React Hooks**: useState and useEffect for local state
+- **Session Integration**: NextAuth session for user context
+- **Error Handling**: Comprehensive error boundaries and fallbacks
+- **Loading Management**: Granular loading states for better UX
+
+### Performance & Security
+- **Authentication Required**: All wishlist operations protected
+- **Rate Limiting**: Backend protection against abuse
+- **Caching Strategy**: Efficient data fetching and updates
+- **Type Safety**: End-to-end TypeScript integration

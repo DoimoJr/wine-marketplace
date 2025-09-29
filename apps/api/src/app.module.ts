@@ -9,6 +9,7 @@ import { AdminModule } from './admin/admin.module';
 import { UploadModule } from './upload/upload.module';
 import { WishlistModule } from './wishlist/wishlist.module';
 import { FavoriteSellersModule } from './favorite-sellers/favorite-sellers.module';
+import { NexiModule } from './payments/nexi/nexi.module';
 import { CommonModule } from './common/common.module';
 
 @Module({
@@ -27,6 +28,7 @@ import { CommonModule } from './common/common.module';
     UploadModule,
     WishlistModule,
     FavoriteSellersModule,
+    NexiModule,
   ],
 })
 export class AppModule {}

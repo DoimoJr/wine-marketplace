@@ -85,8 +85,7 @@ export async function POST(request: NextRequest) {
 function getPaymentProvider(paymentMethod: string): string {
   const paymentMap: Record<string, string> = {
     'paypal': 'PAYPAL',
-    'stripe': 'STRIPE',
-    'cash_on_delivery': 'PAYPAL' // Usiamo PayPal come default per pagamento alla consegna
+    'nexi_pay': 'NEXI_PAY'
   }
 
   return paymentMap[paymentMethod] || 'PAYPAL'

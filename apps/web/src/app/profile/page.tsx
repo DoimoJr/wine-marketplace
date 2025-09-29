@@ -20,7 +20,14 @@ import {
   CheckCircleIcon,
   XMarkIcon,
   EyeIcon,
-  EyeSlashIcon
+  EyeSlashIcon,
+  PlusIcon,
+  HomeIcon,
+  CameraIcon,
+  ClockIcon,
+  CurrencyEuroIcon,
+  ArrowUpIcon,
+  ArrowDownIcon
 } from '@heroicons/react/24/outline'
 import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid'
 import Navbar from '../../components/Navbar'
@@ -65,6 +72,7 @@ interface ShippingAddress {
 interface UserWine {
   id: string
   title: string
+  description?: string
   price: number
   status: string
   quantity: number
@@ -73,6 +81,75 @@ interface UserWine {
   wineType: string
   annata?: number
   region?: string
+  country?: string
+  producer?: string
+  grapeVariety?: string
+  alcoholContent?: number
+  volume?: number
+  condition?: string
+}
+
+interface Order {
+  id: string
+  status: string
+  totalAmount: number
+  shippingCost: number
+  createdAt: string
+  updatedAt: string
+  wine: {
+    id: string
+    title: string
+    images: string[]
+    wineType: string
+    annata?: number
+  }
+  seller: {
+    id: string
+    username: string
+    firstName: string
+    lastName: string
+  }
+  quantity: number
+}
+
+interface DashboardStats {
+  totalOrders: number
+  pendingOrders: number
+  revenueThisMonth: number
+  revenueLastMonth: number
+  averageOrderValue: number
+  topSellingWine?: {
+    id: string
+    title: string
+    totalSold: number
+  }
+}
+
+interface SellerOrder {
+  id: string
+  orderNumber: string
+  status: string
+  totalAmount: number
+  shippingCost?: number
+  createdAt: string
+  trackingNumber?: string
+  buyer: {
+    id: string
+    username: string
+    firstName?: string
+    lastName?: string
+  }
+  items: {
+    id: string
+    quantity: number
+    price: number
+    wine: {
+      id: string
+      title: string
+      imageUrl?: string
+      annata: number
+    }
+  }[]
 }
 
 export default function ProfilePage() {
@@ -88,6 +165,12 @@ export default function ProfilePage() {
   const [stats, setStats] = useState<UserStats | null>(null)
   const [userWines, setUserWines] = useState<UserWine[]>([])
   const [addresses, setAddresses] = useState<ShippingAddress[]>([])
+  const [orders, setOrders] = useState<Order[]>([])
+
+  // Dashboard data
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null)
+  const [sellerOrders, setSellerOrders] = useState<SellerOrder[]>([])
+  const [dashboardLoading, setDashboardLoading] = useState(false)
 
   // Edit states
   const [isEditingProfile, setIsEditingProfile] = useState(false)
@@ -95,6 +178,11 @@ export default function ProfilePage() {
   const [showPassword, setShowPassword] = useState(false)
   const [isEditingWine, setIsEditingWine] = useState(false)
   const [editingWineId, setEditingWineId] = useState<string | null>(null)
+  const [isAddingAddress, setIsAddingAddress] = useState(false)
+  const [isEditingAddress, setIsEditingAddress] = useState(false)
+  const [editingAddressId, setEditingAddressId] = useState<string | null>(null)
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
 
   // Form data
   const [profileForm, setProfileForm] = useState({
@@ -128,6 +216,18 @@ export default function ProfilePage() {
     status: 'ACTIVE' as const
   })
 
+  const [addressForm, setAddressForm] = useState({
+    firstName: '',
+    lastName: '',
+    address1: '',
+    city: '',
+    zipCode: '',
+    state: '',
+    country: '',
+    phone: '',
+    isDefault: false
+  })
+
   useEffect(() => {
     if (status === 'loading') return
 
@@ -139,17 +239,24 @@ export default function ProfilePage() {
     fetchProfileData()
   }, [session, status, router])
 
+  useEffect(() => {
+    if (activeTab === 'sales' && session && !dashboardLoading && !dashboardStats) {
+      fetchDashboardData()
+    }
+  }, [activeTab, session, dashboardLoading, dashboardStats])
+
   const fetchProfileData = async () => {
     try {
       setLoading(true)
       setError('')
 
-      // Fetch profile, stats, wines, and addresses in parallel
-      const [profileRes, statsRes, winesRes, addressesRes] = await Promise.all([
+      // Fetch profile, stats, wines, addresses, and orders in parallel
+      const [profileRes, statsRes, winesRes, addressesRes, ordersRes] = await Promise.all([
         fetch('/api/users/me'),
         fetch('/api/users/me/stats'),
         fetch('/api/wines/my-wines'),
-        fetch('/api/users/me/shipping-addresses')
+        fetch('/api/users/me/shipping-addresses'),
+        fetch('/api/orders?limit=5&status=PENDING,PAID,SHIPPED,DELIVERED')
       ])
 
       if (profileRes.ok) {
@@ -179,11 +286,131 @@ export default function ProfilePage() {
         setAddresses(addressesData)
       }
 
+      if (ordersRes.ok) {
+        const ordersData = await ordersRes.json()
+        setOrders(ordersData.orders || ordersData)
+      }
+
     } catch (error) {
       console.error('Error fetching profile data:', error)
       setError('Failed to load profile data')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchDashboardData = async () => {
+    try {
+      setDashboardLoading(true)
+
+      // Fetch seller orders with current user as seller
+      const ordersResponse = await fetch(`/api/orders?sellerId=${session?.user?.id}&limit=5`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!ordersResponse.ok) {
+        throw new Error('Failed to fetch orders')
+      }
+
+      const ordersData = await ordersResponse.json()
+      setSellerOrders(ordersData.orders || [])
+
+      // Calculate basic stats from orders data
+      const allOrders = ordersData.orders || []
+      const pendingCount = allOrders.filter((order: SellerOrder) =>
+        ['PENDING', 'CONFIRMED', 'PAID'].includes(order.status)
+      ).length
+
+      const thisMonth = new Date()
+      thisMonth.setDate(1)
+      const lastMonth = new Date(thisMonth)
+      lastMonth.setMonth(lastMonth.getMonth() - 1)
+
+      const thisMonthOrders = allOrders.filter((order: SellerOrder) =>
+        new Date(order.createdAt) >= thisMonth
+      )
+      const lastMonthOrders = allOrders.filter((order: SellerOrder) =>
+        new Date(order.createdAt) >= lastMonth && new Date(order.createdAt) < thisMonth
+      )
+
+      const revenueThisMonth = thisMonthOrders.reduce((sum: number, order: SellerOrder) =>
+        sum + order.totalAmount, 0
+      )
+      const revenueLastMonth = lastMonthOrders.reduce((sum: number, order: SellerOrder) =>
+        sum + order.totalAmount, 0
+      )
+
+      const averageOrderValue = allOrders.length > 0
+        ? allOrders.reduce((sum: number, order: SellerOrder) => sum + order.totalAmount, 0) / allOrders.length
+        : 0
+
+      setDashboardStats({
+        totalOrders: allOrders.length,
+        pendingOrders: pendingCount,
+        revenueThisMonth,
+        revenueLastMonth,
+        averageOrderValue,
+      })
+
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error)
+    } finally {
+      setDashboardLoading(false)
+    }
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'PENDING':
+        return 'bg-yellow-100 text-yellow-800'
+      case 'CONFIRMED':
+        return 'bg-blue-100 text-blue-800'
+      case 'PAID':
+        return 'bg-green-100 text-green-800'
+      case 'PROCESSING':
+        return 'bg-purple-100 text-purple-800'
+      case 'SHIPPED':
+        return 'bg-indigo-100 text-indigo-800'
+      case 'DELIVERED':
+        return 'bg-green-100 text-green-800'
+      case 'CANCELLED':
+        return 'bg-red-100 text-red-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'PENDING':
+        return 'In Attesa'
+      case 'CONFIRMED':
+        return 'Confermato'
+      case 'PAID':
+        return 'Pagato'
+      case 'PROCESSING':
+        return 'In Preparazione'
+      case 'SHIPPED':
+        return 'Spedito'
+      case 'DELIVERED':
+        return 'Consegnato'
+      case 'CANCELLED':
+        return 'Cancellato'
+      default:
+        return status
+    }
+  }
+
+  const getRevenueChange = () => {
+    if (!dashboardStats || dashboardStats.revenueLastMonth === 0) return { percentage: 0, isPositive: true }
+
+    const change = ((dashboardStats.revenueThisMonth - dashboardStats.revenueLastMonth) / dashboardStats.revenueLastMonth) * 100
+    return {
+      percentage: Math.abs(change),
+      isPositive: change >= 0
     }
   }
 
@@ -263,7 +490,7 @@ export default function ProfilePage() {
     setEditingWineId(wine.id)
     setWineForm({
       title: wine.title,
-      description: wine.description,
+      description: wine.description || '',
       price: wine.price,
       annata: wine.annata,
       region: wine.region || '',
@@ -272,10 +499,10 @@ export default function ProfilePage() {
       grapeVariety: wine.grapeVariety || '',
       alcoholContent: wine.alcoholContent,
       volume: wine.volume,
-      wineType: wine.wineType,
-      condition: wine.condition,
+      wineType: wine.wineType as any,
+      condition: wine.condition as any || '',
       quantity: wine.quantity,
-      status: wine.status
+      status: wine.status as any
     })
     setIsEditingWine(true)
   }
@@ -334,6 +561,204 @@ export default function ProfilePage() {
       quantity: 1,
       status: 'ACTIVE'
     })
+  }
+
+  // Shipping Address handlers
+  const handleAddAddress = () => {
+    setAddressForm({
+      firstName: '',
+      lastName: '',
+      address1: '',
+      city: '',
+      zipCode: '',
+      state: '',
+      country: '',
+      phone: '',
+      isDefault: false
+    })
+    setIsAddingAddress(true)
+  }
+
+  const handleEditAddress = (address: ShippingAddress) => {
+    setEditingAddressId(address.id)
+    setAddressForm({
+      firstName: address.firstName,
+      lastName: address.lastName,
+      address1: address.address1,
+      city: address.city,
+      zipCode: address.zipCode,
+      state: address.state,
+      country: address.country,
+      phone: address.phone || '',
+      isDefault: address.isDefault
+    })
+    setIsEditingAddress(true)
+  }
+
+  const handleSaveAddress = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setSuccess('')
+
+    try {
+      const isEditing = editingAddressId !== null
+      const url = isEditing
+        ? `/api/users/me/shipping-addresses/${editingAddressId}`
+        : '/api/users/me/shipping-addresses'
+      const method = isEditing ? 'PATCH' : 'POST'
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(addressForm),
+      })
+
+      if (response.ok) {
+        const savedAddress = await response.json()
+
+        if (isEditing) {
+          setAddresses(prev => prev.map(addr =>
+            addr.id === editingAddressId ? savedAddress : addr
+          ))
+          setIsEditingAddress(false)
+          setEditingAddressId(null)
+        } else {
+          setAddresses(prev => [...prev, savedAddress])
+          setIsAddingAddress(false)
+        }
+
+        setSuccess(isEditing ? 'Address updated successfully!' : 'Address added successfully!')
+        setTimeout(() => setSuccess(''), 3000)
+      } else {
+        const errorData = await response.json()
+        setError(errorData.message || 'Failed to save address')
+      }
+    } catch (error) {
+      console.error('Error saving address:', error)
+      setError('Failed to save address')
+    }
+  }
+
+  const handleDeleteAddress = async (addressId: string) => {
+    if (!confirm('Are you sure you want to delete this address?')) return
+
+    setError('')
+    setSuccess('')
+
+    try {
+      const response = await fetch(`/api/users/me/shipping-addresses/${addressId}`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        setAddresses(prev => prev.filter(addr => addr.id !== addressId))
+        setSuccess('Address deleted successfully!')
+        setTimeout(() => setSuccess(''), 3000)
+      } else {
+        const errorData = await response.json()
+        setError(errorData.message || 'Failed to delete address')
+      }
+    } catch (error) {
+      console.error('Error deleting address:', error)
+      setError('Failed to delete address')
+    }
+  }
+
+  const handleCancelAddressEdit = () => {
+    setIsAddingAddress(false)
+    setIsEditingAddress(false)
+    setEditingAddressId(null)
+    setAddressForm({
+      firstName: '',
+      lastName: '',
+      address1: '',
+      city: '',
+      zipCode: '',
+      state: '',
+      country: '',
+      phone: '',
+      isDefault: false
+    })
+  }
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Il file deve essere inferiore a 5MB')
+        return
+      }
+
+      if (!file.type.startsWith('image/')) {
+        setError('Seleziona un file immagine valido')
+        return
+      }
+
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handleAvatarUpload = async () => {
+    if (!avatarPreview) return
+
+    setIsUploadingAvatar(true)
+    setError('')
+
+    try {
+      const fileInput = document.getElementById('avatar-upload') as HTMLInputElement
+      const file = fileInput?.files?.[0]
+
+      if (!file) {
+        setError('Nessun file selezionato')
+        return
+      }
+
+      const formData = new FormData()
+      formData.append('avatar', file)
+
+      const response = await fetch('/api/upload/avatar', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Errore nel caricamento')
+      }
+
+      const data = await response.json()
+
+      if (profile) {
+        setProfile({ ...profile, avatar: data.avatarUrl })
+      }
+
+      setAvatarPreview(null)
+      setSuccess('Avatar aggiornato con successo!')
+
+      // Reset file input
+      if (fileInput) {
+        fileInput.value = ''
+      }
+    } catch (error) {
+      console.error('Error uploading avatar:', error)
+      setError(error instanceof Error ? error.message : 'Errore nel caricamento avatar')
+    } finally {
+      setIsUploadingAvatar(false)
+    }
+  }
+
+  const handleCancelAvatarUpload = () => {
+    setAvatarPreview(null)
+    const fileInput = document.getElementById('avatar-upload') as HTMLInputElement
+    if (fileInput) {
+      fileInput.value = ''
+    }
   }
 
   const formatPrice = (price: number) => {
@@ -510,6 +935,7 @@ export default function ProfilePage() {
             {[
               { id: 'overview', label: 'Overview', icon: ChartBarIcon },
               { id: 'wines', label: 'My Wines', icon: ShoppingBagIcon },
+              { id: 'sales', label: 'Vendite', icon: CurrencyEuroIcon },
               { id: 'settings', label: 'Settings', icon: PencilIcon }
             ].map((tab) => (
               <button
@@ -533,13 +959,136 @@ export default function ProfilePage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Recent Activity */}
             <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-6">Recent Activity</h2>
-              <div className="space-y-4">
-                <div className="text-center text-gray-500 py-8">
-                  <ChartBarIcon className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p>Recent activity will appear here</p>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold text-gray-900">Attività Recente</h2>
+                <div className="flex space-x-2">
+                  <Link
+                    href="/orders"
+                    className="text-wine-600 hover:text-wine-700 text-sm font-medium"
+                  >
+                    Acquisti
+                  </Link>
+                  <span className="text-gray-300">|</span>
+                  <button
+                    onClick={() => setActiveTab('sales')}
+                    className="text-wine-600 hover:text-wine-700 text-sm font-medium"
+                  >
+                    Vendite
+                  </button>
                 </div>
               </div>
+
+              {orders.length > 0 ? (
+                <div className="space-y-4">
+                  <div className="text-sm text-gray-600 mb-3">
+                    <HeartIcon className="h-4 w-4 inline mr-1" />
+                    I tuoi acquisti recenti
+                  </div>
+                  {orders.map((order) => (
+                    <div key={order.id} className="border rounded-lg p-4 hover:bg-gray-50">
+                      <div className="flex items-center space-x-4">
+                        {/* Wine Image */}
+                        <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                          {order.wine.images && order.wine.images.length > 0 ? (
+                            <Image
+                              src={order.wine.images[0]}
+                              alt={order.wine.title}
+                              width={64}
+                              height={64}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                              <span className="text-gray-400 text-xs">No Image</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Order Details */}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-sm font-medium text-gray-900 truncate">
+                            {order.wine.title}
+                          </h3>
+                          <p className="text-sm text-gray-500">
+                            Da: {order.seller.firstName} {order.seller.lastName}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            Quantità: {order.quantity} • {formatPrice(order.totalAmount)}
+                          </p>
+                        </div>
+
+                        {/* Order Status */}
+                        <div className="flex-shrink-0">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            order.status === 'DELIVERED' ? 'bg-green-100 text-green-800' :
+                            order.status === 'SHIPPED' ? 'bg-blue-100 text-blue-800' :
+                            order.status === 'PAID' ? 'bg-yellow-100 text-yellow-800' :
+                            order.status === 'PENDING' ? 'bg-gray-100 text-gray-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {order.status === 'DELIVERED' ? 'Consegnato' :
+                             order.status === 'SHIPPED' ? 'Spedito' :
+                             order.status === 'PAID' ? 'Pagato' :
+                             order.status === 'PENDING' ? 'In Attesa' :
+                             'Annullato'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 flex justify-between items-center text-xs text-gray-500">
+                        <span>Ordine #{order.id.slice(-6)}</span>
+                        <span>{new Date(order.createdAt).toLocaleDateString('it-IT')}</span>
+                      </div>
+                    </div>
+                  ))}
+
+                  <div className="border-t pt-4 mt-4">
+                    <div className="text-center">
+                      <button
+                        onClick={() => setActiveTab('sales')}
+                        className="text-wine-600 hover:text-wine-700 text-sm font-medium inline-flex items-center"
+                      >
+                        <CurrencyEuroIcon className="h-4 w-4 mr-1" />
+                        Vedi anche le tue vendite
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center text-gray-500 py-8">
+                  <div className="space-y-4">
+                    <ShoppingBagIcon className="h-12 w-12 mx-auto text-gray-300" />
+                    <div>
+                      <p className="text-gray-900 font-medium mb-2">Nessuna attività recente</p>
+                      <p className="text-sm text-gray-600 mb-4">Inizia a comprare o vendere vini per vedere la tua attività qui</p>
+                    </div>
+                    <div className="flex justify-center space-x-4">
+                      <Link
+                        href="/browse"
+                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-wine-600 hover:bg-wine-700 transition-colors"
+                      >
+                        <HeartIcon className="h-4 w-4 mr-2" />
+                        Compra Vini
+                      </Link>
+                      <Link
+                        href="/sell"
+                        className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                      >
+                        <CurrencyEuroIcon className="h-4 w-4 mr-2" />
+                        Vendi Vini
+                      </Link>
+                    </div>
+                    <div className="mt-4">
+                      <button
+                        onClick={() => setActiveTab('sales')}
+                        className="text-wine-600 hover:text-wine-700 text-sm font-medium"
+                      >
+                        O controlla la tua dashboard vendite →
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Quick Stats */}
@@ -665,8 +1214,295 @@ export default function ProfilePage() {
           </div>
         )}
 
+        {activeTab === 'sales' && (
+          <div className="space-y-8">
+            {/* Dashboard Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {/* Total Orders */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-wine-100 rounded-lg">
+                    <ShoppingBagIcon className="h-6 w-6 text-wine-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Ordini Totali</p>
+                    <p className="text-2xl font-bold text-gray-900">{dashboardStats?.totalOrders || 0}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Pending Orders */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-yellow-100 rounded-lg">
+                    <ClockIcon className="h-6 w-6 text-yellow-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Da Elaborare</p>
+                    <p className="text-2xl font-bold text-gray-900">{dashboardStats?.pendingOrders || 0}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Revenue This Month */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <CurrencyEuroIcon className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Ricavi Mese</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {formatPrice(dashboardStats?.revenueThisMonth || 0)}
+                    </p>
+                    {dashboardStats && dashboardStats.revenueLastMonth > 0 && (
+                      <div className="flex items-center text-sm">
+                        {getRevenueChange().isPositive ? (
+                          <ArrowUpIcon className="h-4 w-4 text-green-500 mr-1" />
+                        ) : (
+                          <ArrowDownIcon className="h-4 w-4 text-red-500 mr-1" />
+                        )}
+                        <span className={getRevenueChange().isPositive ? 'text-green-600' : 'text-red-600'}>
+                          {getRevenueChange().percentage.toFixed(1)}%
+                        </span>
+                        <span className="text-gray-500 ml-1">vs mese scorso</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Average Order Value */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <ChartBarIcon className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Valore Medio</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {formatPrice(dashboardStats?.averageOrderValue || 0)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Recent Seller Orders */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold text-gray-900">Ordini Recenti di Vendita</h2>
+                  <Link
+                    href="/dashboard/orders"
+                    className="text-wine-600 hover:text-wine-700 text-sm font-medium"
+                  >
+                    Vedi tutti →
+                  </Link>
+                </div>
+              </div>
+
+              <div className="divide-y divide-gray-200">
+                {sellerOrders.length === 0 ? (
+                  <div className="text-center py-12">
+                    <ShoppingBagIcon className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      Nessun ordine di vendita ancora
+                    </h3>
+                    <p className="text-gray-600 mb-6">
+                      Quando riceverai il tuo primo ordine, lo vedrai qui.
+                    </p>
+                    <Link
+                      href="/sell"
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-wine-600 hover:bg-wine-700 transition-colors"
+                    >
+                      Aggiungi Vino
+                    </Link>
+                  </div>
+                ) : (
+                  sellerOrders.map((order) => (
+                    <div key={order.id} className="p-6 hover:bg-gray-50 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-3 mb-2">
+                            <h3 className="text-lg font-medium text-gray-900">
+                              Ordine #{order.orderNumber}
+                            </h3>
+                            <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
+                              {getStatusText(order.status)}
+                            </div>
+                          </div>
+
+                          <p className="text-sm text-gray-600 mb-2">
+                            da {order.buyer.firstName && order.buyer.lastName
+                              ? `${order.buyer.firstName} ${order.buyer.lastName}`
+                              : order.buyer.username}
+                          </p>
+
+                          <div className="flex items-center space-x-4 text-sm text-gray-600">
+                            <span className="flex items-center">
+                              <CalendarIcon className="h-4 w-4 mr-1" />
+                              {new Date(order.createdAt).toLocaleDateString('it-IT')}
+                            </span>
+                            <span className="flex items-center">
+                              <ShoppingBagIcon className="h-4 w-4 mr-1" />
+                              {order.items.reduce((sum, item) => sum + item.quantity, 0)} articoli
+                            </span>
+                            {order.trackingNumber && (
+                              <span className="flex items-center">
+                                <TruckIcon className="h-4 w-4 mr-1" />
+                                {order.trackingNumber}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-gray-900">
+                            {formatPrice(order.totalAmount)}
+                          </p>
+                          <div className="flex space-x-2 mt-2">
+                            <Link
+                              href={`/dashboard/orders/${order.id}`}
+                              className="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                            >
+                              <EyeIcon className="h-3 w-3 mr-1" />
+                              Dettagli
+                            </Link>
+                            {['CONFIRMED', 'PAID'].includes(order.status) && (
+                              <Link
+                                href={`/dashboard/orders/${order.id}/manage`}
+                                className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded text-white bg-wine-600 hover:bg-wine-700 transition-colors"
+                              >
+                                <PencilIcon className="h-3 w-3 mr-1" />
+                                Gestisci
+                              </Link>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Azioni Rapide Vendite</h2>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Link
+                  href="/sell"
+                  className="inline-flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-wine-600 hover:bg-wine-700 transition-colors"
+                >
+                  Aggiungi Nuovo Vino
+                </Link>
+
+                <Link
+                  href="/dashboard/orders?status=PENDING,CONFIRMED,PAID"
+                  className="inline-flex items-center justify-center px-4 py-3 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                >
+                  <ClockIcon className="h-4 w-4 mr-2" />
+                  Ordini da Elaborare
+                </Link>
+
+                <Link
+                  href="/dashboard/analytics"
+                  className="inline-flex items-center justify-center px-4 py-3 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                >
+                  <ChartBarIcon className="h-4 w-4 mr-2" />
+                  Analytics e Report
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+
         {activeTab === 'settings' && (
           <div className="space-y-8">
+            {/* Avatar Upload Section */}
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-6">Avatar del Profilo</h2>
+
+              <div className="flex items-center space-x-6">
+                {/* Current Avatar */}
+                <div className="relative">
+                  <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-100 border-4 border-white shadow-lg">
+                    {avatarPreview || profile?.avatar ? (
+                      <Image
+                        src={avatarPreview || profile?.avatar || ''}
+                        alt="Avatar preview"
+                        width={96}
+                        height={96}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                        <UserIcon className="h-12 w-12 text-gray-400" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Upload Controls */}
+                <div className="flex-1">
+                  {!avatarPreview ? (
+                    <div>
+                      <label
+                        htmlFor="avatar-upload"
+                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-wine-600 hover:bg-wine-700 cursor-pointer transition-colors"
+                      >
+                        <CameraIcon className="h-4 w-4 mr-2" />
+                        Scegli Nuova Foto
+                      </label>
+                      <input
+                        id="avatar-upload"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleAvatarChange}
+                        className="hidden"
+                      />
+                      <p className="mt-2 text-sm text-gray-500">
+                        JPG, PNG fino a 5MB. Raccomandato: 300x300px.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <p className="text-sm text-gray-700">Anteprima della nuova foto:</p>
+                      <div className="flex items-center space-x-3">
+                        <button
+                          onClick={handleAvatarUpload}
+                          disabled={isUploadingAvatar}
+                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {isUploadingAvatar ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                              Caricamento...
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircleIcon className="h-4 w-4 mr-2" />
+                              Conferma
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={handleCancelAvatarUpload}
+                          disabled={isUploadingAvatar}
+                          className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          <XMarkIcon className="h-4 w-4 mr-2" />
+                          Annulla
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
             {/* Profile Settings */}
             <div className="bg-white rounded-lg shadow-sm p-6">
               <div className="flex justify-between items-center mb-6">
@@ -893,9 +1729,230 @@ export default function ProfilePage() {
                 </p>
               )}
             </div>
+
+            {/* Shipping Addresses Settings */}
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold text-gray-900">Shipping Addresses</h2>
+                <button
+                  onClick={handleAddAddress}
+                  className="bg-wine-600 text-white px-4 py-2 rounded-md hover:bg-wine-700 transition-colors flex items-center"
+                >
+                  <PlusIcon className="h-4 w-4 mr-2" />
+                  Add Address
+                </button>
+              </div>
+
+              {addresses.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {addresses.map((address) => (
+                    <div key={address.id} className="border border-gray-200 rounded-lg p-4 relative">
+                      {address.isDefault && (
+                        <span className="absolute top-2 right-2 bg-wine-100 text-wine-800 text-xs font-medium px-2 py-1 rounded">
+                          Default
+                        </span>
+                      )}
+
+                      <div className="space-y-2">
+                        <div className="font-semibold text-gray-900">
+                          {address.firstName} {address.lastName}
+                        </div>
+                        <div className="text-gray-600">
+                          {address.address1}
+                        </div>
+                        <div className="text-gray-600">
+                          {address.city}, {address.state} {address.zipCode}
+                        </div>
+                        <div className="text-gray-600">
+                          {address.country}
+                        </div>
+                        {address.phone && (
+                          <div className="text-gray-600 flex items-center">
+                            <PhoneIcon className="h-4 w-4 mr-1" />
+                            {address.phone}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex space-x-2 mt-4">
+                        <button
+                          onClick={() => handleEditAddress(address)}
+                          className="flex-1 bg-gray-100 text-gray-700 py-2 px-3 rounded text-sm hover:bg-gray-200 transition-colors"
+                        >
+                          Edit
+                        </button>
+                        {!address.isDefault && (
+                          <button
+                            onClick={() => handleDeleteAddress(address.id)}
+                            className="flex-1 bg-red-100 text-red-700 py-2 px-3 rounded text-sm hover:bg-red-200 transition-colors"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <HomeIcon className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No shipping addresses</h3>
+                  <p className="text-gray-600 mb-4">Add a shipping address to make checkout easier</p>
+                  <button
+                    onClick={handleAddAddress}
+                    className="bg-wine-600 text-white px-6 py-3 rounded-md hover:bg-wine-700 transition-colors"
+                  >
+                    Add Your First Address
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
+
+      {/* Shipping Address Modal */}
+      {(isAddingAddress || isEditingAddress) && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-2xl shadow-lg rounded-md bg-white">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-gray-900">
+                {isAddingAddress ? 'Add Shipping Address' : 'Edit Shipping Address'}
+              </h3>
+              <button
+                onClick={handleCancelAddressEdit}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveAddress} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">First Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={addressForm.firstName}
+                    onChange={(e) => setAddressForm(prev => ({ ...prev, firstName: e.target.value }))}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-wine-500 focus:ring-wine-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Last Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={addressForm.lastName}
+                    onChange={(e) => setAddressForm(prev => ({ ...prev, lastName: e.target.value }))}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-wine-500 focus:ring-wine-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Address</label>
+                <input
+                  type="text"
+                  required
+                  value={addressForm.address1}
+                  onChange={(e) => setAddressForm(prev => ({ ...prev, address1: e.target.value }))}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-wine-500 focus:ring-wine-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">City</label>
+                  <input
+                    type="text"
+                    required
+                    value={addressForm.city}
+                    onChange={(e) => setAddressForm(prev => ({ ...prev, city: e.target.value }))}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-wine-500 focus:ring-wine-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">ZIP Code</label>
+                  <input
+                    type="text"
+                    required
+                    value={addressForm.zipCode}
+                    onChange={(e) => setAddressForm(prev => ({ ...prev, zipCode: e.target.value }))}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-wine-500 focus:ring-wine-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">State</label>
+                  <input
+                    type="text"
+                    required
+                    value={addressForm.state}
+                    onChange={(e) => setAddressForm(prev => ({ ...prev, state: e.target.value }))}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-wine-500 focus:ring-wine-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Country</label>
+                  <input
+                    type="text"
+                    required
+                    value={addressForm.country}
+                    onChange={(e) => setAddressForm(prev => ({ ...prev, country: e.target.value }))}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-wine-500 focus:ring-wine-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Phone (Optional)</label>
+                  <input
+                    type="tel"
+                    value={addressForm.phone}
+                    onChange={(e) => setAddressForm(prev => ({ ...prev, phone: e.target.value }))}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-wine-500 focus:ring-wine-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="isDefault"
+                  checked={addressForm.isDefault}
+                  onChange={(e) => setAddressForm(prev => ({ ...prev, isDefault: e.target.checked }))}
+                  className="h-4 w-4 text-wine-600 focus:ring-wine-500 border-gray-300 rounded"
+                />
+                <label htmlFor="isDefault" className="ml-2 block text-sm text-gray-900">
+                  Set as default address
+                </label>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={handleCancelAddressEdit}
+                  className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-wine-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-wine-600 hover:bg-wine-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-wine-500"
+                >
+                  {isAddingAddress ? 'Add Address' : 'Update Address'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Wine Edit Modal */}
       {isEditingWine && (

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
-import { HeartIcon, ShoppingCartIcon, UserIcon } from '@heroicons/react/24/outline'
+import { HeartIcon, ShoppingCartIcon, UserIcon, ChartBarIcon } from '@heroicons/react/24/outline'
 
 interface NavbarProps {
   currentPage?: 'home' | 'browse' | 'sell' | 'login' | 'wishlist' | 'cart' | 'profile'
@@ -36,11 +36,11 @@ export default function Navbar({ currentPage = 'home' }: NavbarProps) {
             >
               Browse Wines
             </Link>
-            <Link 
-              href="/sell" 
+            <Link
+              href="/sell"
               className={`px-3 py-2 rounded-md text-sm font-medium ${
-                currentPage === 'sell' 
-                  ? 'text-wine-600 font-semibold' 
+                currentPage === 'sell'
+                  ? 'text-wine-600 font-semibold'
                   : 'text-gray-700 hover:text-wine-600'
               }`}
             >
@@ -158,11 +158,11 @@ export default function Navbar({ currentPage = 'home' }: NavbarProps) {
               >
                 Browse Wines
               </Link>
-              <Link 
-                href="/sell" 
+              <Link
+                href="/sell"
                 className={`px-3 py-2 rounded-md text-sm font-medium ${
-                  currentPage === 'sell' 
-                    ? 'text-wine-600 bg-wine-50 font-semibold' 
+                  currentPage === 'sell'
+                    ? 'text-wine-600 bg-wine-50 font-semibold'
                     : 'text-gray-700 hover:text-wine-600 hover:bg-gray-50'
                 }`}
                 onClick={() => setIsMenuOpen(false)}

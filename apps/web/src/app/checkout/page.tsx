@@ -74,7 +74,7 @@ interface ShippingAddress {
 }
 
 interface PaymentMethod {
-  type: 'paypal' | 'stripe' | 'cash_on_delivery'
+  type: 'paypal' | 'nexi_pay'
   label: string
 }
 
@@ -100,14 +100,13 @@ export default function CheckoutPage() {
     country: 'Italy'
   })
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>({
-    type: 'cash_on_delivery',
-    label: 'Pagamento alla consegna'
+    type: 'paypal',
+    label: 'PayPal'
   })
 
   const paymentMethods: PaymentMethod[] = [
-    { type: 'cash_on_delivery', label: 'Pagamento alla consegna' },
     { type: 'paypal', label: 'PayPal' },
-    { type: 'stripe', label: 'Carta di credito (Stripe)' }
+    { type: 'nexi_pay', label: 'Carta di credito (Nexi Pay)' }
   ]
 
   useEffect(() => {

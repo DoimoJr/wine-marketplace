@@ -56,6 +56,7 @@ export enum PaymentProvider {
   PAYPAL = 'PAYPAL',
   STRIPE = 'STRIPE',
   ESCROW = 'ESCROW',
+  NEXI_PAY = 'NEXI_PAY',
 }
 
 export enum PaymentStatus {
