@@ -270,7 +270,15 @@ export default function CheckoutPage() {
 
       const result = await response.json()
 
-      // Redirect alla pagina di successo o ordini
+      // Check if payment requires redirect (Nexi Pay)
+      if (result.requiresRedirect && result.redirectUrl) {
+        console.log('🔀 Redirecting to payment provider:', result.redirectUrl)
+        // Redirect to Nexi Pay payment page
+        window.location.href = result.redirectUrl
+        return
+      }
+
+      // For PayPal or other direct payments, redirect to success page
       router.push('/orders?success=true')
 
     } catch (error) {

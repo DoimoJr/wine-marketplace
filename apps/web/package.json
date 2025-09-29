@@ -6,9 +6,9 @@
   "scripts": {
     "build": "next build",
     "build:prod": "NODE_ENV=production next build",
-    "dev": "next dev",
+    "dev": "next dev -p ${PORT:-3000}",
     "lint": "next lint",
-    "start": "next start",
+    "start": "next start -p ${PORT:-3000}",
     "start:prod": "NODE_ENV=production next start",
     "type-check": "tsc --noEmit",
     "docker:build": "docker build -t wine-marketplace-web -f Dockerfile ../..",

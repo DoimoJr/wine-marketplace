@@ -1,7 +1,9 @@
 import {
   Controller,
   Post,
+  Get,
   Body,
+  Query,
   Req,
   HttpCode,
   HttpStatus,
@@ -27,11 +29,25 @@ export class NexiController {
   @Post('callback')
   @Public() // Questo endpoint deve essere pubblico per ricevere callback da Nexi
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Handle Nexi Pay callback notifications' })
+  @ApiOperation({ summary: 'Handle Nexi Pay callback notifications via POST' })
   @ApiResponse({ status: 200, description: 'Callback processed successfully' })
   @ApiResponse({ status: 400, description: 'Invalid callback data or MAC signature' })
   async handleCallback(@Body() callbackData: any, @Req() request: Request) {
-    this.logger.log('🔔 Received Nexi callback', {
+    return this.processCallback(callbackData, request, 'POST');
+  }
+
+  @Get('callback')
+  @Public() // Questo endpoint deve essere pubblico per ricevere callback da Nexi
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Handle Nexi Pay callback notifications via GET' })
+  @ApiResponse({ status: 200, description: 'Callback processed successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid callback data or MAC signature' })
+  async handleCallbackGet(@Query() callbackData: any, @Req() request: Request) {
+    return this.processCallback(callbackData, request, 'GET');
+  }
+
+  private async processCallback(callbackData: any, request: Request, method: string) {
+    this.logger.log(`🔔 Received Nexi callback via ${method}`, {
       ip: request.ip,
       userAgent: request.headers['user-agent'],
       data: callbackData,
@@ -49,7 +65,7 @@ export class NexiController {
       const result = await this.nexiService.processCallback(callbackData);
 
       this.logger.log('✅ Nexi callback processed successfully', {
-        orderId: callbackData.orderId,
+        transactionId: callbackData.codTrans,
         result,
       });
 

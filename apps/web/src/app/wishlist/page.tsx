@@ -17,6 +17,7 @@ import {
   CheckBadgeIcon
 } from '@heroicons/react/24/outline'
 import { HeartIcon as HeartSolidIcon, UserIcon as UserSolidIcon } from '@heroicons/react/24/solid'
+import Navbar from '../../components/Navbar'
 
 interface WishlistItem {
   id: string
@@ -241,24 +242,30 @@ export default function WishlistPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-wine-600"></div>
+      <div className="min-h-screen bg-gray-50">
+        <Navbar currentPage="wishlist" />
+        <div className="flex items-center justify-center py-16">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-wine-600"></div>
+        </div>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <HeartIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">{error}</h1>
-          <button 
-            onClick={fetchWishlist}
-            className="text-wine-600 hover:text-wine-700 font-medium"
-          >
-            Riprova
-          </button>
+      <div className="min-h-screen bg-gray-50">
+        <Navbar currentPage="wishlist" />
+        <div className="flex items-center justify-center py-16">
+          <div className="text-center">
+            <HeartIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">{error}</h1>
+            <button
+              onClick={fetchWishlist}
+              className="text-wine-600 hover:text-wine-700 font-medium"
+            >
+              Riprova
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -266,6 +273,7 @@ export default function WishlistPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Navbar currentPage="wishlist" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">

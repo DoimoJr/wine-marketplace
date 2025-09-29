@@ -1,6 +1,11 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PaymentProvider, PaymentStatus } from '@wine-marketplace/shared';
+import * as dotenv from 'dotenv';
+import * as path from 'path';
+
+// Load environment variables directly from project root
+dotenv.config({ path: path.join(process.cwd(), '.env') });
 
 @Injectable()
 export class PaymentService {
@@ -203,14 +208,36 @@ export class PaymentService {
 
   private async processNexiPayment(orderId: string, amount: number, paymentData: any) {
     // Nexi Pay API integration
+    console.log('🚨 DEBUG: processNexiPayment called!', { orderId, amount, paymentData });
     try {
       console.log(`Processing Nexi Pay payment for order ${orderId}, amount: ${amount}`);
 
-      // Get Nexi configuration from environment
-      const nexiAlias = this.configService.get('NEXI_ALIAS');
-      const nexiMacKey = this.configService.get('NEXI_MAC_KEY');
-      const nexiTerminalId = this.configService.get('NEXI_TERMINAL_ID');
-      const nexiEnvironment = this.configService.get('NEXI_ENVIRONMENT', 'test');
+      // Force reload environment variables from project root
+      require('dotenv').config({ path: path.join(process.cwd(), '../../.env') });
+
+      // Debug environment variable access
+      console.log('🔍 Environment variables debug:', {
+        configServiceAlias: this.configService.get('NEXI_ALIAS'),
+        processEnvAlias: process.env.NEXI_ALIAS,
+        configServiceMacKey: this.configService.get('NEXI_MAC_KEY') ? 'FOUND' : 'NOT_FOUND',
+        processEnvMacKey: process.env.NEXI_MAC_KEY ? 'FOUND' : 'NOT_FOUND',
+        allNexiKeys: Object.keys(process.env).filter(k => k.includes('NEXI'))
+      });
+
+      // Get Nexi configuration from environment (with fallback to process.env)
+      const nexiAlias = this.configService.get('NEXI_ALIAS') || process.env.NEXI_ALIAS;
+      const nexiMacKey = this.configService.get('NEXI_MAC_KEY') || process.env.NEXI_MAC_KEY;
+      const nexiTerminalId = this.configService.get('NEXI_TERMINAL_ID') || process.env.NEXI_TERMINAL_ID;
+      const nexiEnvironment = this.configService.get('NEXI_ENVIRONMENT', 'test') || process.env.NEXI_ENVIRONMENT || 'test';
+      const nexiGroupId = this.configService.get('NEXI_GROUP_ID') || process.env.NEXI_GROUP_ID;
+
+      console.log('🔧 Final extracted values:', {
+        alias: nexiAlias ? 'FOUND' : 'NOT_FOUND',
+        macKey: nexiMacKey ? 'FOUND' : 'NOT_FOUND',
+        terminalId: nexiTerminalId ? 'FOUND' : 'NOT_FOUND',
+        environment: nexiEnvironment,
+        groupId: nexiGroupId ? 'FOUND' : 'NOT_FOUND'
+      });
 
       if (!nexiAlias || !nexiMacKey) {
         throw new Error('Nexi Pay configuration missing. Check NEXI_ALIAS and NEXI_MAC_KEY in environment variables.');
@@ -220,31 +247,80 @@ export class PaymentService {
         alias: nexiAlias,
         terminalId: nexiTerminalId,
         environment: nexiEnvironment,
+        groupId: nexiGroupId,
         macKeyPresent: !!nexiMacKey
       });
 
-      // In real implementation, this would:
-      // 1. Create payment request with MAC signature
-      // 2. Redirect user to Nexi payment page
-      // 3. Handle callback with result verification
-      // 4. Validate MAC signature on response
+      // Create unique transaction ID for Nexi (max 30 chars)
+      const timestamp = Date.now().toString().slice(-8); // Last 8 digits of timestamp
+      const orderShort = orderId.slice(-8); // Last 8 chars of order ID
+      const nexiOrderId = `NX${timestamp}${orderShort}`; // Format: NXnnnnnnnnxxxxxxxx (18 chars)
+      const currencyCode = 'EUR'; // Currency as string like in Nexi Java example
+      const language = 'ITA';
 
-      // For now, simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 1200));
+      // Base URL depending on environment
+      const baseUrl = nexiEnvironment === 'production'
+        ? 'https://ecommerce.nexi.it/ecomm/ecomm/DispatcherServlet'
+        : 'https://int-ecommerce.nexi.it/ecomm/ecomm/DispatcherServlet';
 
-      // Simulate successful Nexi payment
-      const transactionId = `NEXI_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      // Callback URLs
+      const baseCallbackUrl = this.configService.get('BASE_URL') || process.env.BASE_URL || 'http://localhost:3000';
+      const successUrl = `${baseCallbackUrl}/payment/success`;
+      const errorUrl = `${baseCallbackUrl}/payment/error`;
+      const cancelUrl = `${baseCallbackUrl}/payment/cancel`;
 
+      // Parameters for MAC signature generation (order matters for MAC calculation)
+      const params = {
+        alias: nexiAlias,
+        importo: Math.round(amount * 100).toString(), // Amount in cents
+        divisa: currencyCode,
+        codTrans: nexiOrderId,
+        url: successUrl,
+        url_back: errorUrl,
+        url_post: `${this.configService.get('NEXT_PUBLIC_API_URL') || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3010/api'}/payments/nexi/callback`,
+        languageId: language
+      };
+
+      // Add optional parameters if available (these are added after base params for correct MAC)
+      if (nexiTerminalId) {
+        params['TERMINAL_ID'] = nexiTerminalId;
+      }
+      if (nexiGroupId) {
+        params['group'] = nexiGroupId;
+      }
+
+      // Generate MAC signature
+      const mac = this.generateNexiMac(params, nexiMacKey);
+      params['mac'] = mac;
+
+      // Create payment URL
+      const paymentUrl = `${baseUrl}?${Object.keys(params)
+        .map(key => `${key}=${encodeURIComponent(params[key])}`)
+        .join('&')}`;
+
+      console.log('🔗 Generated Nexi payment URL with parameters:', {
+        nexiOrderId,
+        codTransLength: nexiOrderId.length,
+        amount: params.importo,
+        currency: params.divisa,
+        macGenerated: !!mac,
+        allParams: Object.keys(params),
+        fullUrl: paymentUrl.substring(0, 150) + '...'
+      });
+
+      // Return payment details for frontend redirect
+      // Note: Payment is PENDING until callback confirms it
       return {
         success: true,
-        transactionId,
-        status: PaymentStatus.COMPLETED,
+        transactionId: nexiOrderId,
+        status: PaymentStatus.PENDING, // Changed from COMPLETED to PENDING
         amount,
-        fees: amount * 0.018, // Nexi fee simulation (lower than PayPal/Stripe)
+        fees: amount * 0.018, // Nexi fee estimation
         provider: PaymentProvider.NEXI_PAY,
-        redirectUrl: `https://int-ecommerce.nexi.it/ecomm/ecomm/DispatcherServlet?${transactionId}`, // Test environment URL
-        nexiOrderId: transactionId,
+        redirectUrl: paymentUrl, // Real Nexi payment URL
+        nexiOrderId,
         environment: nexiEnvironment,
+        requiresRedirect: true // Flag to indicate frontend should redirect
       };
     } catch (error) {
       console.error('Nexi Pay payment failed:', error);
@@ -262,8 +338,8 @@ export class PaymentService {
       console.log(`Processing Nexi Pay refund for payment ${paymentId}, amount: ${amount}`);
 
       // Get Nexi configuration
-      const nexiAlias = this.configService.get('NEXI_ALIAS');
-      const nexiMacKey = this.configService.get('NEXI_MAC_KEY');
+      const nexiAlias = this.configService.get('NEXI_ALIAS') || process.env.NEXI_ALIAS;
+      const nexiMacKey = this.configService.get('NEXI_MAC_KEY') || process.env.NEXI_MAC_KEY;
 
       if (!nexiAlias || !nexiMacKey) {
         throw new Error('Nexi Pay configuration missing for refund');
@@ -296,19 +372,35 @@ export class PaymentService {
 
   // Utility method for generating Nexi Pay MAC signature
   private generateNexiMac(data: Record<string, string>, macKey: string): string {
-    // In real implementation, this would:
-    // 1. Sort parameters alphabetically
-    // 2. Concatenate key=value pairs
-    // 3. Append MAC key
-    // 4. Calculate SHA1 hash
+    // Nexi MAC generation follows specific rules:
+    // 1. Exclude 'mac' parameter if present
+    // 2. Sort parameters alphabetically by key
+    // 3. Concatenate key=value pairs (no separators)
+    // 4. Append MAC key at the end
+    // 5. Calculate SHA1 hash and convert to uppercase hex
     const crypto = require('crypto');
 
-    const sortedKeys = Object.keys(data).sort();
-    const concatenated = sortedKeys
-      .map(key => `${key}=${data[key]}`)
-      .join('') + macKey;
+    // Remove mac parameter if present and sort keys
+    const filteredData = { ...data };
+    delete filteredData.mac; // Don't include mac in MAC calculation
 
-    return crypto.createHash('sha1').update(concatenated).digest('hex').toUpperCase();
+    const sortedKeys = Object.keys(filteredData).sort();
+    // Fixed: Use only codTrans, divisa, importo as per Nexi's official Java example
+    const concatenated = `codTrans=${data.codTrans}divisa=${data.divisa}importo=${data.importo}${macKey}`;
+
+    const sha1Hash = crypto.createHash('sha1').update(concatenated, 'utf8').digest('hex').toLowerCase();
+
+    console.log('🔐 MAC generation debug (FIXED):', {
+      codTrans: data.codTrans,
+      divisa: data.divisa,
+      importo: data.importo,
+      concatenatedString: concatenated,
+      concatenatedLength: concatenated.length,
+      hashGenerated: sha1Hash,
+      macKeyLength: macKey.length
+    });
+
+    return sha1Hash;
   }
 
   async generateShippingLabel(orderId: string, shippingAddress: any) {

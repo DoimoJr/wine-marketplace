@@ -60,22 +60,37 @@ export class NexiService {
   }
 
   async processCallback(callbackData: any): Promise<any> {
-    const { orderId, esito, importo, codTrans, data: transactionDate } = callbackData;
+    const { esito, importo, codTrans, data: transactionDate } = callbackData;
 
     this.logger.log('Processing Nexi callback', {
-      orderId,
       esito,
       importo,
       codTrans,
+      transactionDate,
     });
 
-    if (!orderId) {
-      throw new BadRequestException('Missing orderId in callback');
+    if (!codTrans) {
+      throw new BadRequestException('Missing codTrans (transaction code) in callback');
     }
+
+    // Extract orderId from codTrans (format: ORDER_originalOrderId_timestamp)
+    let extractedOrderId = codTrans;
+    if (codTrans.startsWith('ORDER_')) {
+      const parts = codTrans.split('_');
+      if (parts.length >= 3) {
+        // Remove 'ORDER_' prefix and timestamp suffix
+        extractedOrderId = parts.slice(1, -1).join('_');
+      }
+    }
+
+    this.logger.log('Extracted order ID from codTrans', {
+      codTrans,
+      extractedOrderId,
+    });
 
     // Find the order in database
     const order = await this.prisma.order.findUnique({
-      where: { id: orderId },
+      where: { id: extractedOrderId },
       include: {
         buyer: {
           select: { id: true, email: true, firstName: true, lastName: true },
@@ -87,7 +102,7 @@ export class NexiService {
     });
 
     if (!order) {
-      throw new BadRequestException(`Order ${orderId} not found`);
+      throw new BadRequestException(`Order ${extractedOrderId} not found`);
     }
 
     // Process based on transaction result (esito)
@@ -111,7 +126,7 @@ export class NexiService {
 
     // Update order in database
     const updatedOrder = await this.prisma.order.update({
-      where: { id: orderId },
+      where: { id: extractedOrderId },
       data: {
         status: newOrderStatus,
         paymentStatus: newPaymentStatus,
@@ -132,7 +147,7 @@ export class NexiService {
       await this.markWinesAsSold(updatedOrder.items);
     }
 
-    this.logger.log(`Order ${orderId} updated`, {
+    this.logger.log(`Order ${extractedOrderId} updated`, {
       oldStatus: order.status,
       newStatus: newOrderStatus,
       oldPaymentStatus: order.paymentStatus,
@@ -143,7 +158,7 @@ export class NexiService {
     // await this.sendPaymentNotification(updatedOrder);
 
     return {
-      orderId,
+      orderId: extractedOrderId,
       status: newOrderStatus,
       paymentStatus: newPaymentStatus,
       transactionId: codTrans,

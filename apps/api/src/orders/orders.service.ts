@@ -979,12 +979,60 @@ export class OrdersService {
       orders.push(order);
     }
 
-    // Return summary of all created orders
+    const grandTotal = orders.reduce((sum, order) => sum + order.totalAmount.toNumber(), 0);
+
+    // If using Nexi Pay, process payment and return redirect URL
+    if (paymentProvider === PaymentProvider.NEXI_PAY) {
+      // Use the first order as the main order for payment processing
+      const mainOrder = orders[0];
+
+      try {
+        const paymentResult = await this.paymentService.processPayment(
+          mainOrder.id,
+          grandTotal,
+          PaymentProvider.NEXI_PAY,
+          { batchId } // Include batch ID in payment data
+        );
+
+        console.log('💳 Nexi Pay payment processing result:', paymentResult);
+
+        // Return with redirect URL for Nexi Pay
+        // Type assertion since we know NEXI_PAY returns requiresRedirect and redirectUrl
+        const nexiResult = paymentResult as any;
+        return {
+          batchId,
+          totalOrders: orders.length,
+          orders,
+          grandTotal,
+          requiresRedirect: nexiResult.requiresRedirect || false,
+          redirectUrl: nexiResult.redirectUrl || null,
+          paymentProvider: PaymentProvider.NEXI_PAY,
+          transactionId: paymentResult.transactionId,
+        };
+      } catch (error) {
+        console.error('❌ Nexi Pay processing failed:', error);
+
+        // If payment processing fails, mark orders as cancelled
+        for (const order of orders) {
+          await this.prisma.order.update({
+            where: { id: order.id },
+            data: {
+              status: OrderStatus.CANCELLED,
+              paymentStatus: PaymentStatus.FAILED
+            },
+          });
+        }
+
+        throw new BadRequestException('Payment processing failed: ' + error.message);
+      }
+    }
+
+    // For other payment providers (like PayPal), return standard response
     return {
       batchId,
       totalOrders: orders.length,
       orders,
-      grandTotal: orders.reduce((sum, order) => sum + order.totalAmount.toNumber(), 0),
+      grandTotal,
     };
   }
 }

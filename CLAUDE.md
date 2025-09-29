@@ -24,16 +24,27 @@ This is a **wine marketplace monorepo** - a Vinted-style platform for buying and
 - **Frontend**: Next.js with NextAuth for authentication
 - **Deployment**: Apps deploy independently to Render
 
+## Fixed Port Configuration
+
+**Standard Development Ports:**
+- **API**: Port `3010` (NestJS backend)
+- **Web**: Port `3000` (Next.js customer frontend)
+- **Admin**: Port `3001` (Next.js admin dashboard)
+
 ## Common Commands
 
 ### Development
 ```bash
-# Start all apps in development mode
-pnpm dev
+# Start all apps with fixed ports (RECOMMENDED)
+pnpm dev                     # Auto-cleanup + start all services
 
-# Start individual apps
+# Alternative commands
+pnpm dev:clean               # Same as pnpm dev (cleanup + start)
+pnpm kill                    # Stop all development services
+
+# Legacy individual start (not recommended)
 pnpm --filter api dev        # NestJS API on :3010
-pnpm --filter web dev        # Next.js web on :3000  
+pnpm --filter web dev        # Next.js web on :3000
 pnpm --filter admin dev      # Next.js admin on :3001
 ```
 
