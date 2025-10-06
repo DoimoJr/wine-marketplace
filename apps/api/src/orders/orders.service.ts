@@ -342,6 +342,11 @@ export class OrdersService {
       },
     });
 
+    // Mark wines as sold if payment is completed successfully
+    if (paymentResult.success && updatedOrder.paymentStatus === PaymentStatus.COMPLETED) {
+      await this.markWinesAsSold(updatedOrder.items);
+    }
+
     return {
       order: updatedOrder,
       payment: paymentResult,
